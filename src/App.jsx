@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
+import SavedTab from './SavedTab'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -40,6 +41,8 @@ export default function App() {
         <h1>Suave</h1>
         <p>Logged in as {session.user.email}</p>
         <button onClick={handleLogout}>Log out</button>
+        <hr style={{ margin: '20px 0' }} />
+        <SavedTab session={session} />
       </div>
     )
   }
@@ -69,4 +72,4 @@ export default function App() {
       {message && <p style={{ marginTop: 10 }}>{message}</p>}
     </div>
   )
-      }
+        }

@@ -39,21 +39,29 @@ export default function App() {
 
   if (session) {
     return (
-      <div style={{ padding: 20 }}>
-        <h1>Suave</h1>
-        <p>Logged in as {session.user.email}</p>
-        <button onClick={handleLogout}>Log out</button>
+      <div className="app-shell">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <div className="brand" style={{ marginBottom: 0 }}>Suave</div>
+            <div className="subtext" style={{ marginBottom: 0 }}>{session.user.email}</div>
+          </div>
+          <button className="btn-secondary" onClick={handleLogout}>Log out</button>
+        </div>
 
-        <div style={{ margin: '20px 0', display: 'flex', gap: 10 }}>
-          <button onClick={() => setActiveTab('reply')} disabled={activeTab === 'reply'}>
-            Reply Generator
+        <div className="navbar">
+          <button
+            className={activeTab === 'reply' ? 'active' : ''}
+            onClick={() => setActiveTab('reply')}
+          >
+            Reply
           </button>
-          <button onClick={() => setActiveTab('saved')} disabled={activeTab === 'saved'}>
+          <button
+            className={activeTab === 'saved' ? 'active' : ''}
+            onClick={() => setActiveTab('saved')}
+          >
             Saved
           </button>
         </div>
-
-        <hr style={{ margin: '20px 0' }} />
 
         {activeTab === 'reply' && <ReplyGenerator />}
         {activeTab === 'saved' && <SavedTab session={session} />}
@@ -62,28 +70,36 @@ export default function App() {
   }
 
   return (
-    <div style={{ padding: 20, maxWidth: 400, margin: '0 auto' }}>
-      <h1>Suave</h1>
-      <input
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        style={{ display: 'block', width: '100%', marginBottom: 10, padding: 10 }}
-      />
-      <input
-        placeholder="Password"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        style={{ display: 'block', width: '100%', marginBottom: 10, padding: 10 }}
-      />
-      <button onClick={handleSignIn} disabled={loading} style={{ marginRight: 10 }}>
-        Log In
-      </button>
-      <button onClick={handleSignUp} disabled={loading}>
-        Sign Up
-      </button>
-      {message && <p style={{ marginTop: 10 }}>{message}</p>}
+    <div className="app-shell" style={{ paddingTop: 60 }}>
+      <div className="brand" style={{ fontSize: 32, textAlign: 'center' }}>Suave</div>
+      <div className="subtext" style={{ textAlign: 'center', marginBottom: 24 }}>
+        Smooth conversations, smarter replies.
+      </div>
+
+      <div className="card">
+        <input
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{ marginBottom: 10 }}
+        />
+        <input
+          placeholder="Password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={{ marginBottom: 14 }}
+        />
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn-primary" onClick={handleSignIn} disabled={loading} style={{ flex: 1 }}>
+            Log In
+          </button>
+          <button className="btn-secondary" onClick={handleSignUp} disabled={loading} style={{ flex: 1 }}>
+            Sign Up
+          </button>
+        </div>
+        {message && <p className="subtext" style={{ marginTop: 12 }}>{message}</p>}
+      </div>
     </div>
   )
-          }
+}

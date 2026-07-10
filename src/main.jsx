@@ -9,6 +9,17 @@ if ('serviceWorker' in navigator) {
   })
 }
 
+function setAppHeight() {
+  const height = window.visualViewport ? window.visualViewport.height : window.innerHeight
+  document.documentElement.style.setProperty('--app-height', `${height}px`)
+}
+
+setAppHeight()
+window.addEventListener('resize', setAppHeight)
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', setAppHeight)
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />

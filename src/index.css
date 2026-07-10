@@ -60,7 +60,7 @@ button:disabled {
 }
 .btn-gradient:hover:not(:disabled) { opacity: 0.92; }
 
-input, select {
+input, select, textarea {
   font-family: inherit;
   background: var(--surface);
   color: var(--text);
@@ -71,9 +71,13 @@ input, select {
   width: 100%;
 }
 
-input:focus, select:focus {
+input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--gold);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-dim);
 }
 
 .app-shell {
@@ -228,6 +232,12 @@ input:focus, select:focus {
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-bottom: 24px;
+}
+
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
 .tone-card {
@@ -425,14 +435,12 @@ input:focus, select:focus {
   max-height: 120px;
   overflow-y: auto;
   line-height: 1.4;
+  width: auto;
 }
 
 .chat-input-row textarea:focus {
   outline: none;
-}
-
-.chat-input-row textarea::placeholder {
-  color: var(--text-dim);
+  border-color: transparent;
 }
 
 .chat-send-btn {
@@ -529,4 +537,4 @@ input:focus, select:focus {
 .save-btn.saved {
   color: var(--gold);
   border-color: var(--gold);
-  }
+    }

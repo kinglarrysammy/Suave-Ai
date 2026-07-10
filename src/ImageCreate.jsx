@@ -15,15 +15,24 @@ const STYLE_HINTS = {
   fantasy: 'fantasy digital painting, epic composition, dramatic lighting, intricate detail, concept art quality, trending on artstation',
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 export default function ImageCreate({ session }) {
   const [idea, setIdea] = useState('')
   const [style, setStyle] = useState('realistic')
-  const [enhancedPrompt, setEnhancedPrompt] = useState('')
   const [imageUrl, setImageUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingStep, setLoadingStep] = useState('')
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
+
+  const checkImageLoads = (url) =>
+    new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => resolve(true)
+      img.onerror = () => resolve(false)
+      img.src = url
+    })
 
   const generateImage = async () => {
     if (!idea.trim() || loading) return
@@ -60,14 +69,32 @@ Include specifics on: subject and pose, composition and framing, lighting, color
 
       const data = await response.json()
       const finalPrompt = data.choices?.[0]?.message?.content?.trim() || idea.trim()
-      setEnhancedPrompt(finalPrompt)
 
-      setLoadingStep('Generating your image...')
-      const seed = Math.floor(Math.random() * 1000000)
-      const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?width=1024&height=1024&nologo=true&enhance=true&seed=${seed}&model=flux`
-      setImageUrl(url)
+      let attempt = 0
+      let success = false
+
+      while (attempt < 3 && !success) {
+        attempt++
+        setLoadingStep(attempt === 1 ? 'Generating your image...' : `Server busy, retrying (${attempt}/3)...`)
+
+        const seed = Math.floor(Math.random() * 1000000)
+        const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(finalPrompt)}?width=1024&height=1024&nologo=true&enhance=true&seed=${seed}`
+
+        const loaded = await checkImageLoads(url)
+
+        if (loaded) {
+          setImageUrl(url)
+          success = true
+        } else if (attempt < 3) {
+          await sleep(3000)
+        }
+      }
+
+      if (!success) {
+        throw new Error('The image server is busy right now. Please try again in a moment.')
+      }
     } catch (err) {
-      setError('Failed to generate image. Try again.')
+      setError(err.message || 'Failed to generate image. Try again.')
       console.error(err)
     } finally {
       setLoading(false)
@@ -97,6 +124,7 @@ Include specifics on: subject and pose, composition and framing, lighting, color
         onChange={(e) => setIdea(e.target.value)}
         rows={3}
         style={{ marginBottom: 20, resize: 'vertical' }}
+        disabled={loading}
       />
 
       <div className="section-label">2. Choose a style</div>
@@ -105,7 +133,8 @@ Include specifics on: subject and pose, composition and framing, lighting, color
           <div
             key={s.key}
             className={`tone-card ${style === s.key ? 'selected' : ''}`}
-            onClick={() => setStyle(s.key)}
+            onClick={() => !loading && setStyle(s.key)}
+            style={{ opacity: loading ? 0.6 : 1, pointerEvents: loading ? 'none' : 'auto' }}
           >
             <span className="tone-emoji">{s.emoji}</span>
             {s.label}
@@ -153,4 +182,4 @@ Include specifics on: subject and pose, composition and framing, lighting, color
       )}
     </div>
   )
-             }
+                      }

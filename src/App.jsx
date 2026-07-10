@@ -5,6 +5,7 @@ import ReplyGenerator from './ReplyGenerator'
 import DatingCoach from './DatingCoach'
 import AIAssistant from './AIAssistant'
 import InstallButton from './InstallButton'
+import FeedbackButton from './FeedbackButton'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -79,6 +80,8 @@ export default function App() {
           {activeTab === 'assistant' && <AIAssistant session={session} />}
           {activeTab === 'saved' && <SavedTab session={session} />}
         </div>
+
+        <FeedbackButton session={session} />
       </div>
     )
   }

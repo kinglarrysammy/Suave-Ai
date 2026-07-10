@@ -11,6 +11,7 @@ export default function ReplyGenerator() {
   const [image, setImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [tone, setTone] = useState('flirty')
+  const [myBubbleSide, setMyBubbleSide] = useState('right')
   const [replies, setReplies] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -38,6 +39,9 @@ export default function ReplyGenerator() {
     setError('')
     setReplies([])
 
+    const otherSide = myBubbleSide === 'right' ? 'LEFT' : 'RIGHT'
+    const mySide = myBubbleSide.toUpperCase()
+
     try {
       const base64Image = await toBase64(image)
 
@@ -55,13 +59,15 @@ export default function ReplyGenerator() {
               content: [
                 {
                   type: 'text',
-                  text: `This is a screenshot of a chat conversation (WhatsApp, iMessage, or similar). Bubble alignment tells you who is who:
-- Bubbles aligned to the RIGHT side of the screen (usually green or blue) = messages sent BY THE APP USER (the person asking for help). This is NOT the person they are texting.
-- Bubbles aligned to the LEFT side of the screen (usually white or gray) = messages from THE OTHER PERSON the user is texting.
+                  text: `This is a chat screenshot. The user has confirmed: their own messages appear on the ${mySide} side of the screen. The other person's messages appear on the ${otherSide} side of the screen.
 
-Your job: read the most recent message from THE OTHER PERSON (left-aligned, last one at the bottom of the visible chat) and generate 3 reply options that THE APP USER (right-aligned sender) could send back, in a ${tone} tone. The replies should directly respond to what the other person just said — matching the context and mood of the conversation, not contradicting or arguing with the user's own earlier messages.
+STEP 1: Find the bubble positioned lowest on the screen (the most recent message) that is on the ${otherSide} side. That is the other person's latest message — this is what you must respond to.
 
-Return ONLY a JSON array of 3 strings, nothing else, no markdown formatting, no explanation.`,
+STEP 2: Ignore any ${mySide}-side bubbles when deciding what to reply to — those are messages the user already sent, not something to respond to.
+
+STEP 3: Write 3 different reply options, in a ${tone} tone, that the user (${mySide} side) could send back to directly address that ${otherSide}-side message.
+
+Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, no extra text.`,
                 },
                 {
                   type: 'image_url',
@@ -101,6 +107,24 @@ Return ONLY a JSON array of 3 strings, nothing else, no markdown formatting, no 
         </label>
       </div>
 
+      <div style={{ marginBottom: 20 }}>
+        <p className="subtext" style={{ marginBottom: 8 }}>Which side are YOUR messages on?</p>
+        <div className="tone-grid">
+          <div
+            className={`tone-card ${myBubbleSide === 'right' ? 'selected' : ''}`}
+            onClick={() => setMyBubbleSide('right')}
+          >
+            My bubbles: Right
+          </div>
+          <div
+            className={`tone-card ${myBubbleSide === 'left' ? 'selected' : ''}`}
+            onClick={() => setMyBubbleSide('left')}
+          >
+            My bubbles: Left
+          </div>
+        </div>
+      </div>
+
       <div className="tone-grid">
         {TONES.map((t) => (
           <div
@@ -135,4 +159,4 @@ Return ONLY a JSON array of 3 strings, nothing else, no markdown formatting, no 
       )}
     </div>
   )
-      }
+        }

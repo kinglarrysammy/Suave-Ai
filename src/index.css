@@ -6,6 +6,7 @@
   --surface-hover: #2a251d;
   --border: #3a332688;
   --gold: #d4a94a;
+  --gold-light: #e8c874;
   --gold-soft: #d4a94a22;
   --text: #f3ede1;
   --text-dim: #a89f8c;
@@ -48,6 +49,17 @@ button:disabled {
 }
 .btn-secondary:hover:not(:disabled) { background: var(--surface-hover); }
 
+.btn-gradient {
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  color: #16130f;
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  border-radius: 14px;
+  letter-spacing: 0.3px;
+}
+.btn-gradient:hover:not(:disabled) { opacity: 0.92; }
+
 input, select {
   font-family: inherit;
   background: var(--surface);
@@ -67,7 +79,7 @@ input:focus, select:focus {
 .app-shell {
   max-width: 520px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 16px 16px 30px;
 }
 
 .brand {
@@ -84,12 +96,19 @@ input:focus, select:focus {
   margin-bottom: 16px;
 }
 
+.section-label {
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 10px;
+  color: var(--text);
+}
+
 .navbar {
   display: flex;
-  gap: 8px;
+  justify-content: space-between;
   background: var(--surface);
-  padding: 6px;
-  border-radius: 14px;
+  padding: 8px;
+  border-radius: 16px;
   margin-bottom: 24px;
   border: 1px solid var(--border);
 }
@@ -98,14 +117,22 @@ input:focus, select:focus {
   flex: 1;
   background: transparent;
   color: var(--text-dim);
-  padding: 10px 8px;
-  font-size: 13px;
-  border-radius: 10px;
+  padding: 10px 4px;
+  font-size: 11px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.navbar button .nav-icon {
+  font-size: 18px;
 }
 
 .navbar button.active {
-  background: var(--gold-soft);
-  color: var(--gold);
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  color: #16130f;
 }
 
 .card {
@@ -119,10 +146,29 @@ input:focus, select:focus {
 .upload-zone {
   border: 2px dashed var(--border);
   border-radius: 16px;
-  padding: 24px 20px;
+  padding: 40px 20px;
   text-align: center;
   color: var(--text-dim);
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  cursor: pointer;
+}
+
+.upload-zone .upload-icon {
+  font-size: 32px;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.upload-zone .upload-title {
+  color: var(--text);
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.upload-zone .upload-hint {
+  font-size: 12px;
+  color: var(--text-dim);
 }
 
 .upload-zone .preview-img {
@@ -147,30 +193,32 @@ input:focus, select:focus {
   margin-top: 8px;
 }
 
-.upload-label:hover {
-  opacity: 0.9;
-}
+.upload-label:hover { opacity: 0.9; }
 
-.upload-label input[type="file"] {
-  display: none;
-}
+.upload-label input[type="file"] { display: none; }
 
 .tone-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 24px;
 }
 
 .tone-card {
   background: var(--surface);
   border: 1.5px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 10px;
+  border-radius: 14px;
+  padding: 22px 10px;
   text-align: center;
   color: var(--text-dim);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
+}
+
+.tone-card .tone-emoji {
+  font-size: 26px;
+  display: block;
+  margin-bottom: 8px;
 }
 
 .tone-card.selected {

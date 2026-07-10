@@ -27,7 +27,7 @@ export default function SavedTab({ session }) {
   return (
     <div>
       <div className="brand">Saved</div>
-      <div className="subtext">Your saved replies and moments.</div>
+      <div className="subtext">Your saved replies, messages, and images.</div>
 
       {loading && <p className="subtext">Loading...</p>}
       {!loading && items.length === 0 && <p className="subtext">No saved items yet.</p>}
@@ -35,7 +35,15 @@ export default function SavedTab({ session }) {
       {items.map((item) => (
         <div key={item.id} className="card">
           <p style={{ fontSize: 12, color: 'var(--gold)', marginBottom: 6 }}>{item.type}</p>
-          <p style={{ marginBottom: 10 }}>{item.content}</p>
+          {item.type === 'AI Image' ? (
+            <img
+              src={item.content}
+              alt="Saved"
+              style={{ width: '100%', borderRadius: 10, marginBottom: 10 }}
+            />
+          ) : (
+            <p style={{ marginBottom: 10 }}>{item.content}</p>
+          )}
           <button className="btn-secondary" onClick={() => deleteItem(item.id)}>
             Delete
           </button>
@@ -43,4 +51,4 @@ export default function SavedTab({ session }) {
       ))}
     </div>
   )
-}
+    }

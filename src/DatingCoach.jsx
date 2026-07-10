@@ -1,14 +1,21 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSpeechToText } from './useSpeechToText'
+import { supabase } from './supabaseClient'
 
-const SYSTEM_PROMPT =
-  'You are a supportive, insightful dating coach. Help the user navigate their dating life, decode texts, understand relationship dynamics, and build confidence. Keep responses concise, practical, and encouraging. Stay strictly focused on dating and relationships — do not answer unrelated general knowledge questions.'
+const SYSTEM_PROMPT = `You are a supportive, insightful dating coach. Your job is to help the user with real dating situations — approaching a crush, texting someone new, DMing someone on social media, keeping a conversation going, or figuring out if someone is interested.
 
-export default function DatingCoach() {
+Important: Do not immediately generate lines or advice on the first message if the situation is unclear. First ask 1-3 short clarifying questions to understand: who the person is (how they know them, what platform), what the user's goal is (start a conversation, ask them out, keep it going), and what vibe they want (playful, sincere, confident). Once you have enough context, give clear, practical advice and, if relevant, 2-3 example messages the user could send.
+
+Keep every response concise and conversational. Stay strictly focused on dating and relationships — do not answer unrelated general knowledge questions.`
+
+export default function DatingCoach({ session }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
+  const [image, setImage] = useState(null)
+  const [imagePreview, setImagePreview] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [savedIndices, setSavedIndices] = useState([])
   const scrollRef = useRef(null)
   const { isListening, error: micError, startListening, stopListening } = useSpeechToText()
 
@@ -26,16 +33,51 @@ export default function DatingCoach() {
     })
   }
 
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+    setImage(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  const toBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.readAsDataURL(file)
+      reader.onload = () => resolve(reader.result.split(',')[1])
+      reader.onerror = reject
+    })
+
   const sendMessage = async () => {
-    if (!input.trim() || loading) return
-    const userMessage = { role: 'user', content: input.trim() }
-    const newMessages = [...messages, userMessage]
-    setMessages(newMessages)
-    setInput('')
+    if ((!input.trim() && !image) || loading) return
     setLoading(true)
     setError('')
 
+    let userContent = input.trim() || 'Take a look at this.'
+    let apiContent = userContent
+
     try {
+      if (image) {
+        const base64Image = await toBase64(image)
+        apiContent = [
+          { type: 'text', text: userContent },
+          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+        ]
+      }
+
+      const userMessage = { role: 'user', content: userContent, hasImage: !!image }
+      const newMessages = [...messages, userMessage]
+      setMessages(newMessages)
+      setInput('')
+      setImage(null)
+      setImagePreview(null)
+
+      const apiMessages = [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...newMessages.slice(0, -1).map((m) => ({ role: m.role, content: m.content })),
+        { role: 'user', content: apiContent },
+      ]
+
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -44,14 +86,14 @@ export default function DatingCoach() {
         },
         body: JSON.stringify({
           model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-          messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...newMessages],
-          max_tokens: 600,
+          messages: apiMessages,
+          max_tokens: 700,
         }),
       })
 
       const data = await response.json()
       const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not respond.'
-      setMessages([...newMessages, { role: 'assistant', content: reply }])
+      setMessages((prev) => [...prev, { role: 'assistant', content: reply }])
     } catch (err) {
       setError('Failed to get a response. Try again.')
       console.error(err)
@@ -67,21 +109,45 @@ export default function DatingCoach() {
     }
   }
 
+  const saveMessage = async (index, content) => {
+    if (!session) return
+    const { error } = await supabase.from('saved_items').insert({
+      user_id: session.user.id,
+      type: 'Dating Coach',
+      content,
+    })
+    if (!error) setSavedIndices((prev) => [...prev, index])
+  }
+
   return (
-    <div>
+    <div className="chat-page">
       <div className="brand">💘 Dating Coach</div>
-      <div className="subtext">Advice, texting help, and confidence — dating only.</div>
+      <div className="subtext" style={{ marginBottom: 12 }}>
+        Have a crush but don't know how to approach? Saw someone on Instagram and want to DM
+        but don't know what to say — or worried they won't reply? Tell me the situation and
+        I'll help you craft the right message.
+      </div>
 
       <div className="chat-window">
         {messages.length === 0 && (
           <div className="chat-empty">
             <span className="chat-empty-icon">💘</span>
-            Ask me anything about your dating life.
+            Example: "I found this girl's page on Instagram and want to DM her but don't know
+            what to say." I'll ask a couple questions, then craft the message for you.
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={`chat-bubble ${m.role}`}>
-            {m.content}
+          <div key={i}>
+            <div className={`chat-bubble ${m.role}`}>{m.content}</div>
+            {m.role === 'assistant' && (
+              <button
+                className={`save-btn ${savedIndices.includes(i) ? 'saved' : ''}`}
+                onClick={() => saveMessage(i, m.content)}
+                disabled={savedIndices.includes(i)}
+              >
+                {savedIndices.includes(i) ? '✓ Saved' : '💾 Save'}
+              </button>
+            )}
           </div>
         ))}
         {loading && <div className="chat-typing">Typing...</div>}
@@ -91,7 +157,25 @@ export default function DatingCoach() {
       {error && <p className="error-text">{error}</p>}
       {micError && <p className="error-text">{micError}</p>}
 
+      {imagePreview && (
+        <div className="attach-preview">
+          <img src={imagePreview} alt="attached" />
+          <span>Image attached</span>
+          <button
+            className="btn-secondary"
+            style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 11 }}
+            onClick={() => { setImage(null); setImagePreview(null) }}
+          >
+            Remove
+          </button>
+        </div>
+      )}
+
       <div className="chat-input-row">
+        <label className="attach-btn">
+          📎
+          <input type="file" accept="image/*" onChange={handleImageSelect} />
+        </label>
         <button
           className={`mic-btn ${isListening ? 'listening' : ''}`}
           onClick={handleMicClick}
@@ -100,7 +184,7 @@ export default function DatingCoach() {
           🎤
         </button>
         <input
-          placeholder={isListening ? 'Listening...' : 'Type a message...'}
+          placeholder={isListening ? 'Listening...' : 'Tell me the situation...'}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -109,11 +193,11 @@ export default function DatingCoach() {
         <button
           className="chat-send-btn"
           onClick={sendMessage}
-          disabled={!input.trim() || loading}
+          disabled={(!input.trim() && !image) || loading}
         >
           ➤
         </button>
       </div>
     </div>
   )
-        }
+           }

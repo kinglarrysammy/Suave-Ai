@@ -76,10 +76,39 @@ input:focus, select:focus {
   border-color: var(--gold);
 }
 
+/* Login screen wrapper (scrollable, centered) */
 .app-shell {
   max-width: 520px;
   margin: 0 auto;
   padding: 16px 16px 30px;
+}
+
+/* Logged-in dashboard: locked to one screen height, no outer scroll */
+.dashboard-shell {
+  max-width: 520px;
+  margin: 0 auto;
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 16px 12px;
+  overflow: hidden;
+}
+
+.dashboard-header {
+  flex-shrink: 0;
+}
+
+.dashboard-content {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dashboard-content.chat-mode {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .brand {
@@ -111,6 +140,7 @@ input:focus, select:focus {
   border-radius: 16px;
   margin-bottom: 16px;
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .navbar button {
@@ -249,14 +279,54 @@ input:focus, select:focus {
   border: 1px solid var(--border);
 }
 
-/* Chat layout - flexible height so input stays visible above keyboard */
+/* Chat page: fills whatever space dashboard-content gives it */
 .chat-page {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  height: 100dvh;
-  max-height: 70vh;
-  max-height: 70dvh;
+}
+
+.chat-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.chat-toolbar button {
+  flex: 1;
+  font-size: 12px;
+  padding: 8px;
+}
+
+.history-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 8px;
+  margin-bottom: 10px;
+  max-height: 160px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.history-item {
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.history-item:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.history-empty {
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 8px 10px;
 }
 
 .chat-window {
@@ -413,6 +483,7 @@ input:focus, select:focus {
   margin-bottom: 8px;
   font-size: 12px;
   color: var(--text-dim);
+  flex-shrink: 0;
 }
 
 .attach-preview img {

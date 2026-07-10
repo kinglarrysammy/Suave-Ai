@@ -21,6 +21,7 @@ export default function DatingCoach({ session }) {
   const [error, setError] = useState('')
   const [savedIndices, setSavedIndices] = useState([])
   const scrollRef = useRef(null)
+  const textareaRef = useRef(null)
   const { isListening, error: micError, startListening, stopListening } = useSpeechToText()
 
   useEffect(() => {
@@ -36,6 +37,13 @@ export default function DatingCoach({ session }) {
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+    }
+  }, [input])
 
   const persist = async (updatedMessages) => {
     if (!session) return
@@ -248,7 +256,9 @@ export default function DatingCoach({ session }) {
         >
           🎤
         </button>
-        <input
+        <textarea
+          ref={textareaRef}
+          rows={1}
           placeholder={isListening ? 'Listening...' : 'Tell me the situation...'}
           value={input}
           onChange={(e) => setInput(e.target.value)}

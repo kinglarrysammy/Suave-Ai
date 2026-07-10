@@ -55,7 +55,13 @@ export default function ReplyGenerator() {
               content: [
                 {
                   type: 'text',
-                  text: `You are a dating conversation assistant. Look at this chat screenshot and generate 3 different reply options in a ${tone} tone. Return ONLY a JSON array of 3 strings, nothing else, no markdown formatting.`,
+                  text: `This is a screenshot of a chat conversation (WhatsApp, iMessage, or similar). Bubble alignment tells you who is who:
+- Bubbles aligned to the RIGHT side of the screen (usually green or blue) = messages sent BY THE APP USER (the person asking for help). This is NOT the person they are texting.
+- Bubbles aligned to the LEFT side of the screen (usually white or gray) = messages from THE OTHER PERSON the user is texting.
+
+Your job: read the most recent message from THE OTHER PERSON (left-aligned, last one at the bottom of the visible chat) and generate 3 reply options that THE APP USER (right-aligned sender) could send back, in a ${tone} tone. The replies should directly respond to what the other person just said — matching the context and mood of the conversation, not contradicting or arguing with the user's own earlier messages.
+
+Return ONLY a JSON array of 3 strings, nothing else, no markdown formatting, no explanation.`,
                 },
                 {
                   type: 'image_url',
@@ -87,12 +93,12 @@ export default function ReplyGenerator() {
       <div className="subtext">Upload a chat screenshot, pick a vibe, get replies.</div>
 
       <div className="upload-zone">
-        {imagePreview ? (
-          <img src={imagePreview} alt="preview" className="preview-img" />
-        ) : (
-          <p>📤 Drop or choose a screenshot</p>
-        )}
-        <input type="file" accept="image/*" onChange={handleImageChange} />
+        {imagePreview && <img src={imagePreview} alt="preview" className="preview-img" />}
+        {!imagePreview && <p>📤 No image selected yet</p>}
+        <label className="upload-label">
+          Upload your image
+          <input type="file" accept="image/*" onChange={handleImageChange} />
+        </label>
       </div>
 
       <div className="tone-grid">
@@ -129,4 +135,4 @@ export default function ReplyGenerator() {
       )}
     </div>
   )
-        }
+      }

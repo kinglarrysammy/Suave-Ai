@@ -68,7 +68,7 @@ export default function AIAssistant() {
   }
 
   return (
-    <div>
+    <div className="chat-page">
       <div className="brand">✨ AI Assistant</div>
       <div className="subtext">Ask anything — general knowledge and information.</div>
 

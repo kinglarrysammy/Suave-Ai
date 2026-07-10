@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSpeechToText } from './useSpeechToText'
 import { supabase } from './supabaseClient'
+import { getLatestConversation, listConversations, getConversation, saveConversation } from './conversationStore'
 
 const SYSTEM_PROMPT = `You are a supportive, insightful dating coach. Your job is to help the user with real dating situations — approaching a crush, texting someone new, DMing someone on social media, keeping a conversation going, or figuring out if someone is interested.
 
@@ -10,6 +11,9 @@ Keep every response concise and conversational. Stay strictly focused on dating 
 
 export default function DatingCoach({ session }) {
   const [messages, setMessages] = useState([])
+  const [conversationId, setConversationId] = useState(null)
+  const [history, setHistory] = useState([])
+  const [showHistory, setShowHistory] = useState(false)
   const [input, setInput] = useState('')
   const [image, setImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
@@ -20,8 +24,54 @@ export default function DatingCoach({ session }) {
   const { isListening, error: micError, startListening, stopListening } = useSpeechToText()
 
   useEffect(() => {
+    if (!session) return
+    getLatestConversation(session.user.id, 'coach').then((convo) => {
+      if (convo) {
+        setMessages(convo.messages || [])
+        setConversationId(convo.id)
+      }
+    })
+  }, [session])
+
+  useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  const persist = async (updatedMessages) => {
+    if (!session) return
+    const { id } = await saveConversation({
+      id: conversationId,
+      userId: session.user.id,
+      mode: 'coach',
+      messages: updatedMessages,
+    })
+    if (id && !conversationId) setConversationId(id)
+  }
+
+  const startNewChat = () => {
+    setMessages([])
+    setConversationId(null)
+    setImage(null)
+    setImagePreview(null)
+    setShowHistory(false)
+  }
+
+  const openHistory = async () => {
+    if (!showHistory && session) {
+      const list = await listConversations(session.user.id, 'coach')
+      setHistory(list)
+    }
+    setShowHistory(!showHistory)
+  }
+
+  const loadOldChat = async (id) => {
+    const convo = await getConversation(id)
+    if (convo) {
+      setMessages(convo.messages || [])
+      setConversationId(convo.id)
+    }
+    setShowHistory(false)
+  }
 
   const handleMicClick = () => {
     if (isListening) {
@@ -65,7 +115,7 @@ export default function DatingCoach({ session }) {
         ]
       }
 
-      const userMessage = { role: 'user', content: userContent, hasImage: !!image }
+      const userMessage = { role: 'user', content: userContent }
       const newMessages = [...messages, userMessage]
       setMessages(newMessages)
       setInput('')
@@ -93,7 +143,9 @@ export default function DatingCoach({ session }) {
 
       const data = await response.json()
       const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not respond.'
-      setMessages((prev) => [...prev, { role: 'assistant', content: reply }])
+      const finalMessages = [...newMessages, { role: 'assistant', content: reply }]
+      setMessages(finalMessages)
+      persist(finalMessages)
     } catch (err) {
       setError('Failed to get a response. Try again.')
       console.error(err)
@@ -122,11 +174,26 @@ export default function DatingCoach({ session }) {
   return (
     <div className="chat-page">
       <div className="brand">💘 Dating Coach</div>
-      <div className="subtext" style={{ marginBottom: 12 }}>
-        Have a crush but don't know how to approach? Saw someone on Instagram and want to DM
-        but don't know what to say — or worried they won't reply? Tell me the situation and
-        I'll help you craft the right message.
+      <div className="subtext" style={{ marginBottom: 10 }}>
+        Have a crush but don't know how to approach? Tell me the situation and I'll help you
+        craft the right message.
       </div>
+
+      <div className="chat-toolbar">
+        <button className="btn-secondary" onClick={startNewChat}>+ New Chat</button>
+        <button className="btn-secondary" onClick={openHistory}>🕐 History</button>
+      </div>
+
+      {showHistory && (
+        <div className="history-panel">
+          {history.length === 0 && <p className="history-empty">No past conversations yet.</p>}
+          {history.map((h) => (
+            <div key={h.id} className="history-item" onClick={() => loadOldChat(h.id)}>
+              {h.title || 'Conversation'}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="chat-window">
         {messages.length === 0 && (
@@ -200,4 +267,4 @@ export default function DatingCoach({ session }) {
       </div>
     </div>
   )
-           }
+      }

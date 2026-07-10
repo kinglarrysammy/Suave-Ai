@@ -1,5 +1,12 @@
 import { useState } from 'react'
 
+const TONES = [
+  { key: 'flirty', label: '😏 Flirty' },
+  { key: 'funny', label: '😂 Funny' },
+  { key: 'confident', label: '🔥 Confident' },
+  { key: 'casual', label: '💬 Casual' },
+]
+
 export default function ReplyGenerator() {
   const [image, setImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
@@ -75,52 +82,51 @@ export default function ReplyGenerator() {
   }
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Reply Generator</h2>
+    <div>
+      <div className="brand">Reply Generator</div>
+      <div className="subtext">Upload a chat screenshot, pick a vibe, get replies.</div>
 
-      <input type="file" accept="image/*" onChange={handleImageChange} style={{ marginBottom: 10 }} />
-
-      {imagePreview && (
-        <img
-          src={imagePreview}
-          alt="preview"
-          style={{ maxWidth: '100%', borderRadius: 8, marginBottom: 10 }}
-        />
-      )}
-
-      <div style={{ marginBottom: 10 }}>
-        <label style={{ marginRight: 10 }}>Tone:</label>
-        <select value={tone} onChange={(e) => setTone(e.target.value)}>
-          <option value="flirty">Flirty</option>
-          <option value="funny">Funny</option>
-          <option value="casual">Casual</option>
-          <option value="confident">Confident</option>
-        </select>
+      <div className="upload-zone">
+        {imagePreview ? (
+          <img src={imagePreview} alt="preview" className="preview-img" />
+        ) : (
+          <p>📤 Drop or choose a screenshot</p>
+        )}
+        <input type="file" accept="image/*" onChange={handleImageChange} />
       </div>
 
-      <button onClick={generateReplies} disabled={!image || loading}>
+      <div className="tone-grid">
+        {TONES.map((t) => (
+          <div
+            key={t.key}
+            className={`tone-card ${tone === t.key ? 'selected' : ''}`}
+            onClick={() => setTone(t.key)}
+          >
+            {t.label}
+          </div>
+        ))}
+      </div>
+
+      <button
+        className="btn-primary"
+        onClick={generateReplies}
+        disabled={!image || loading}
+        style={{ width: '100%', padding: '14px' }}
+      >
         {loading ? 'Generating...' : 'Generate Replies'}
       </button>
 
-      {error && <p style={{ color: 'red', marginTop: 10 }}>{error}</p>}
+      {error && <p className="error-text">{error}</p>}
 
       {replies.length > 0 && (
         <div style={{ marginTop: 20 }}>
           {replies.map((reply, i) => (
-            <div
-              key={i}
-              style={{
-                border: '1px solid #333',
-                borderRadius: 8,
-                padding: 12,
-                marginBottom: 10,
-              }}
-            >
-              <p>{reply}</p>
+            <div key={i} className="reply-card">
+              {reply}
             </div>
           ))}
         </div>
       )}
     </div>
   )
-                                    }
+        }

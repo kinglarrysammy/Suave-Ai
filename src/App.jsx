@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 import SavedTab from './SavedTab'
+import ReplyGenerator from './ReplyGenerator'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -8,6 +9,7 @@ export default function App() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [activeTab, setActiveTab] = useState('reply')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -41,8 +43,20 @@ export default function App() {
         <h1>Suave</h1>
         <p>Logged in as {session.user.email}</p>
         <button onClick={handleLogout}>Log out</button>
+
+        <div style={{ margin: '20px 0', display: 'flex', gap: 10 }}>
+          <button onClick={() => setActiveTab('reply')} disabled={activeTab === 'reply'}>
+            Reply Generator
+          </button>
+          <button onClick={() => setActiveTab('saved')} disabled={activeTab === 'saved'}>
+            Saved
+          </button>
+        </div>
+
         <hr style={{ margin: '20px 0' }} />
-        <SavedTab session={session} />
+
+        {activeTab === 'reply' && <ReplyGenerator />}
+        {activeTab === 'saved' && <SavedTab session={session} />}
       </div>
     )
   }
@@ -72,4 +86,4 @@ export default function App() {
       {message && <p style={{ marginTop: 10 }}>{message}</p>}
     </div>
   )
-        }
+          }

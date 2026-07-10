@@ -24,29 +24,23 @@ export default function SavedTab({ session }) {
     fetchItems()
   }
 
-  if (loading) return <p style={{ padding: 20 }}>Loading saved items...</p>
-
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Saved</h2>
-      {items.length === 0 && <p>No saved items yet.</p>}
+    <div>
+      <div className="brand">Saved</div>
+      <div className="subtext">Your saved replies and moments.</div>
+
+      {loading && <p className="subtext">Loading...</p>}
+      {!loading && items.length === 0 && <p className="subtext">No saved items yet.</p>}
+
       {items.map((item) => (
-        <div
-          key={item.id}
-          style={{
-            border: '1px solid #333',
-            borderRadius: 8,
-            padding: 12,
-            marginBottom: 10,
-          }}
-        >
-          <p style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{item.type}</p>
-          <p>{item.content}</p>
-          <button onClick={() => deleteItem(item.id)} style={{ marginTop: 8 }}>
+        <div key={item.id} className="card">
+          <p style={{ fontSize: 12, color: 'var(--gold)', marginBottom: 6 }}>{item.type}</p>
+          <p style={{ marginBottom: 10 }}>{item.content}</p>
+          <button className="btn-secondary" onClick={() => deleteItem(item.id)}>
             Delete
           </button>
         </div>
       ))}
     </div>
   )
-      }
+}

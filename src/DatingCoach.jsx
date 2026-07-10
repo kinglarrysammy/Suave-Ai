@@ -199,8 +199,6 @@ export default function DatingCoach({ session }) {
         {messages.length === 0 && (
           <div className="chat-empty">
             <span className="chat-empty-icon">💘</span>
-            Example: "I found this girl's page on Instagram and want to DM her but don't know
-            what to say." I'll ask a couple questions, then craft the message for you.
           </div>
         )}
         {messages.map((m, i) => (
@@ -267,4 +265,4 @@ export default function DatingCoach({ session }) {
       </div>
     </div>
   )
-      }
+    }

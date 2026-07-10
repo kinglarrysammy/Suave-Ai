@@ -388,24 +388,35 @@ input:focus, select:focus {
 
 .chat-input-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 26px;
-  padding: 6px 6px 6px 16px;
+  border-radius: 20px;
+  padding: 6px 6px 6px 14px;
   flex-shrink: 0;
 }
 
-.chat-input-row input {
+.chat-input-row textarea {
   border: none;
   background: transparent;
-  padding: 8px 0;
+  padding: 9px 0;
   flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  resize: none;
+  max-height: 120px;
+  overflow-y: auto;
+  line-height: 1.4;
 }
 
-.chat-input-row input:focus {
+.chat-input-row textarea:focus {
   outline: none;
+}
+
+.chat-input-row textarea::placeholder {
+  color: var(--text-dim);
 }
 
 .chat-send-btn {

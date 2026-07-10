@@ -307,6 +307,9 @@ input:focus, select:focus {
 }
 
 .history-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 9px 10px;
   border-radius: 10px;
   font-size: 13px;
@@ -323,6 +326,19 @@ input:focus, select:focus {
   color: var(--text-dim);
   font-size: 12px;
   padding: 8px 10px;
+}
+
+.delete-history-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 14px;
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+
+.delete-history-btn:hover {
+  color: var(--danger);
 }
 
 .chat-window {

@@ -1,10 +1,10 @@
 import { useState } from 'react'
 
 const TONES = [
-  { key: 'flirty', label: '😏 Flirty' },
-  { key: 'funny', label: '😂 Funny' },
-  { key: 'confident', label: '🔥 Confident' },
-  { key: 'casual', label: '💬 Casual' },
+  { key: 'flirty', emoji: '😏', label: 'Flirty' },
+  { key: 'funny', emoji: '😂', label: 'Funny' },
+  { key: 'confident', emoji: '🔥', label: 'Confident' },
+  { key: 'casual', emoji: '💬', label: 'Casual' },
 ]
 
 export default function ReplyGenerator() {
@@ -134,15 +134,24 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
       <div className="brand">Reply Generator</div>
       <div className="subtext">Upload a chat screenshot, pick a vibe, get replies.</div>
 
+      <div className="section-label">1. Upload screenshot</div>
       <div className="upload-zone">
-        {imagePreview && <img src={imagePreview} alt="preview" className="preview-img" />}
-        {!imagePreview && <p>📤 No image selected yet</p>}
+        {imagePreview ? (
+          <img src={imagePreview} alt="preview" className="preview-img" />
+        ) : (
+          <>
+            <div className="upload-icon">⬆️</div>
+            <div className="upload-title">Click to upload or drag and drop</div>
+            <div className="upload-hint">PNG, JPG up to 10MB</div>
+          </>
+        )}
         <label className="upload-label">
-          Upload your image
+          {imagePreview ? 'Change image' : 'Upload your image'}
           <input type="file" accept="image/*" onChange={handleImageChange} />
         </label>
       </div>
 
+      <div className="section-label">2. Choose the vibe</div>
       <div className="tone-grid">
         {TONES.map((t) => (
           <div
@@ -150,18 +159,18 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
             className={`tone-card ${tone === t.key ? 'selected' : ''}`}
             onClick={() => setTone(t.key)}
           >
+            <span className="tone-emoji">{t.emoji}</span>
             {t.label}
           </div>
         ))}
       </div>
 
       <button
-        className="btn-primary"
+        className="btn-gradient"
         onClick={generateReplies}
         disabled={!image || loading}
-        style={{ width: '100%', padding: '14px' }}
       >
-        {loading ? loadingStep || 'Generating...' : 'Generate Replies'}
+        {loading ? loadingStep || 'Generating...' : '✨ Generate Replies ✨'}
       </button>
 
       {error && <p className="error-text">{error}</p>}
@@ -177,4 +186,4 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
       )}
     </div>
   )
-              }
+          }

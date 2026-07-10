@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSpeechToText } from './useSpeechToText'
-import { getLatestConversation, listConversations, getConversation, saveConversation } from './conversationStore'
+import { getLatestConversation, listConversations, getConversation, saveConversation, deleteConversation } from './conversationStore'
 
 const SYSTEM_PROMPT =
   'You are a helpful, knowledgeable general-purpose assistant. Answer questions on any topic clearly and accurately. If the user sends an image, look at it carefully and answer based on what you actually see in it. Keep responses concise unless the user asks for detail.'
@@ -74,6 +74,16 @@ export default function AIAssistant({ session }) {
       setConversationId(convo.id)
     }
     setShowHistory(false)
+  }
+
+  const deleteOldChat = async (e, id) => {
+    e.stopPropagation()
+    await deleteConversation(id)
+    setHistory((prev) => prev.filter((h) => h.id !== id))
+    if (id === conversationId) {
+      setMessages([])
+      setConversationId(null)
+    }
   }
 
   const handleMicClick = () => {
@@ -179,7 +189,10 @@ export default function AIAssistant({ session }) {
           {history.length === 0 && <p className="history-empty">No past conversations yet.</p>}
           {history.map((h) => (
             <div key={h.id} className="history-item" onClick={() => loadOldChat(h.id)}>
-              {h.title || 'Conversation'}
+              <span style={{ flex: 1 }}>{h.title || 'Conversation'}</span>
+              <button className="delete-history-btn" onClick={(e) => deleteOldChat(e, h.id)}>
+                🗑️
+              </button>
             </div>
           ))}
         </div>
@@ -249,4 +262,4 @@ export default function AIAssistant({ session }) {
       </div>
     </div>
   )
-          }
+    }

@@ -1,22 +1,77 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSpeechToText } from './useSpeechToText'
+import { supabase } from './supabaseClient'
+import { getLatestConversation, listConversations, getConversation, saveConversation } from './conversationStore'
 
-const SYSTEM_PROMPT =
-  'You are a helpful, knowledgeable general-purpose assistant. Answer questions on any topic clearly and accurately. If the user sends an image, look at it carefully and answer based on what you actually see in it. Keep responses concise unless the user asks for detail.'
+const SYSTEM_PROMPT = `You are a supportive, insightful dating coach. Your job is to help the user with real dating situations — approaching a crush, texting someone new, DMing someone on social media, keeping a conversation going, or figuring out if someone is interested.
 
-export default function AIAssistant() {
+Important: Do not immediately generate lines or advice on the first message if the situation is unclear. First ask 1-3 short clarifying questions to understand: who the person is (how they know them, what platform), what the user's goal is (start a conversation, ask them out, keep it going), and what vibe they want (playful, sincere, confident). Once you have enough context, give clear, practical advice and, if relevant, 2-3 example messages the user could send.
+
+Keep every response concise and conversational. Stay strictly focused on dating and relationships — do not answer unrelated general knowledge questions.`
+
+export default function DatingCoach({ session }) {
   const [messages, setMessages] = useState([])
+  const [conversationId, setConversationId] = useState(null)
+  const [history, setHistory] = useState([])
+  const [showHistory, setShowHistory] = useState(false)
   const [input, setInput] = useState('')
   const [image, setImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [savedIndices, setSavedIndices] = useState([])
   const scrollRef = useRef(null)
   const { isListening, error: micError, startListening, stopListening } = useSpeechToText()
 
   useEffect(() => {
+    if (!session) return
+    getLatestConversation(session.user.id, 'coach').then((convo) => {
+      if (convo) {
+        setMessages(convo.messages || [])
+        setConversationId(convo.id)
+      }
+    })
+  }, [session])
+
+  useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  const persist = async (updatedMessages) => {
+    if (!session) return
+    const { id } = await saveConversation({
+      id: conversationId,
+      userId: session.user.id,
+      mode: 'coach',
+      messages: updatedMessages,
+    })
+    if (id && !conversationId) setConversationId(id)
+  }
+
+  const startNewChat = () => {
+    setMessages([])
+    setConversationId(null)
+    setImage(null)
+    setImagePreview(null)
+    setShowHistory(false)
+  }
+
+  const openHistory = async () => {
+    if (!showHistory && session) {
+      const list = await listConversations(session.user.id, 'coach')
+      setHistory(list)
+    }
+    setShowHistory(!showHistory)
+  }
+
+  const loadOldChat = async (id) => {
+    const convo = await getConversation(id)
+    if (convo) {
+      setMessages(convo.messages || [])
+      setConversationId(convo.id)
+    }
+    setShowHistory(false)
+  }
 
   const handleMicClick = () => {
     if (isListening) {
@@ -48,7 +103,7 @@ export default function AIAssistant() {
     setLoading(true)
     setError('')
 
-    const userContent = input.trim() || 'Take a look at this.'
+    let userContent = input.trim() || 'Take a look at this.'
     let apiContent = userContent
 
     try {
@@ -88,7 +143,9 @@ export default function AIAssistant() {
 
       const data = await response.json()
       const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not respond.'
-      setMessages((prev) => [...prev, { role: 'assistant', content: reply }])
+      const finalMessages = [...newMessages, { role: 'assistant', content: reply }]
+      setMessages(finalMessages)
+      persist(finalMessages)
     } catch (err) {
       setError('Failed to get a response. Try again.')
       console.error(err)
@@ -104,21 +161,60 @@ export default function AIAssistant() {
     }
   }
 
+  const saveMessage = async (index, content) => {
+    if (!session) return
+    const { error } = await supabase.from('saved_items').insert({
+      user_id: session.user.id,
+      type: 'Dating Coach',
+      content,
+    })
+    if (!error) setSavedIndices((prev) => [...prev, index])
+  }
+
   return (
     <div className="chat-page">
-      <div className="brand">✨ AI Assistant</div>
-      <div className="subtext">Ask anything, or send an image and ask about it.</div>
+      <div className="brand">💘 Dating Coach</div>
+      <div className="subtext" style={{ marginBottom: 10 }}>
+        Have a crush but don't know how to approach? Tell me the situation and I'll help you
+        craft the right message.
+      </div>
+
+      <div className="chat-toolbar">
+        <button className="btn-secondary" onClick={startNewChat}>+ New Chat</button>
+        <button className="btn-secondary" onClick={openHistory}>🕐 History</button>
+      </div>
+
+      {showHistory && (
+        <div className="history-panel">
+          {history.length === 0 && <p className="history-empty">No past conversations yet.</p>}
+          {history.map((h) => (
+            <div key={h.id} className="history-item" onClick={() => loadOldChat(h.id)}>
+              {h.title || 'Conversation'}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="chat-window">
         {messages.length === 0 && (
           <div className="chat-empty">
-            <span className="chat-empty-icon">✨</span>
-            Ask me anything, or attach a photo and ask a question about it.
+            <span className="chat-empty-icon">💘</span>
+            Example: "I found this girl's page on Instagram and want to DM her but don't know
+            what to say." I'll ask a couple questions, then craft the message for you.
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={`chat-bubble ${m.role}`}>
-            {m.content}
+          <div key={i}>
+            <div className={`chat-bubble ${m.role}`}>{m.content}</div>
+            {m.role === 'assistant' && (
+              <button
+                className={`save-btn ${savedIndices.includes(i) ? 'saved' : ''}`}
+                onClick={() => saveMessage(i, m.content)}
+                disabled={savedIndices.includes(i)}
+              >
+                {savedIndices.includes(i) ? '✓ Saved' : '💾 Save'}
+              </button>
+            )}
           </div>
         ))}
         {loading && <div className="chat-typing">Typing...</div>}
@@ -155,7 +251,7 @@ export default function AIAssistant() {
           🎤
         </button>
         <input
-          placeholder={isListening ? 'Listening...' : 'Type a message...'}
+          placeholder={isListening ? 'Listening...' : 'Tell me the situation...'}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

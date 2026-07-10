@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { supabase } from './supabaseClient'
 
 const TONES = [
   { key: 'flirty', emoji: '😏', label: 'Flirty' },
@@ -7,7 +8,7 @@ const TONES = [
   { key: 'casual', emoji: '💬', label: 'Casual' },
 ]
 
-export default function ReplyGenerator() {
+export default function ReplyGenerator({ session }) {
   const [image, setImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [tone, setTone] = useState('flirty')
@@ -15,6 +16,7 @@ export default function ReplyGenerator() {
   const [loading, setLoading] = useState(false)
   const [loadingStep, setLoadingStep] = useState('')
   const [error, setError] = useState('')
+  const [savedIndices, setSavedIndices] = useState([])
 
   const handleImageChange = (e) => {
     const file = e.target.files[0]
@@ -22,6 +24,7 @@ export default function ReplyGenerator() {
     setImage(file)
     setImagePreview(URL.createObjectURL(file))
     setReplies([])
+    setSavedIndices([])
     setError('')
   }
 
@@ -129,6 +132,16 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
     }
   }
 
+  const saveReply = async (index, content) => {
+    if (!session) return
+    const { error } = await supabase.from('saved_items').insert({
+      user_id: session.user.id,
+      type: 'Reply Generator',
+      content,
+    })
+    if (!error) setSavedIndices((prev) => [...prev, index])
+  }
+
   return (
     <div>
       <div className="brand">Reply Generator</div>
@@ -180,10 +193,19 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
           {replies.map((reply, i) => (
             <div key={i} className="reply-card">
               {reply}
+              <div>
+                <button
+                  className={`save-btn ${savedIndices.includes(i) ? 'saved' : ''}`}
+                  onClick={() => saveReply(i, reply)}
+                  disabled={savedIndices.includes(i)}
+                >
+                  {savedIndices.includes(i) ? '✓ Saved' : '💾 Save'}
+                </button>
+              </div>
             </div>
           ))}
         </div>
       )}
     </div>
   )
-          }
+      }

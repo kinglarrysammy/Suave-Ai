@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSpeechToText } from './useSpeechToText'
 import { supabase } from './supabaseClient'
-import { getLatestConversation, listConversations, getConversation, saveConversation } from './conversationStore'
+import { getLatestConversation, listConversations, getConversation, saveConversation, deleteConversation } from './conversationStore'
 
 const SYSTEM_PROMPT = `You are a supportive, insightful dating coach. Your job is to help the user with real dating situations — approaching a crush, texting someone new, DMing someone on social media, keeping a conversation going, or figuring out if someone is interested.
 
@@ -79,6 +79,16 @@ export default function DatingCoach({ session }) {
       setConversationId(convo.id)
     }
     setShowHistory(false)
+  }
+
+  const deleteOldChat = async (e, id) => {
+    e.stopPropagation()
+    await deleteConversation(id)
+    setHistory((prev) => prev.filter((h) => h.id !== id))
+    if (id === conversationId) {
+      setMessages([])
+      setConversationId(null)
+    }
   }
 
   const handleMicClick = () => {
@@ -197,7 +207,10 @@ export default function DatingCoach({ session }) {
           {history.length === 0 && <p className="history-empty">No past conversations yet.</p>}
           {history.map((h) => (
             <div key={h.id} className="history-item" onClick={() => loadOldChat(h.id)}>
-              {h.title || 'Conversation'}
+              <span style={{ flex: 1 }}>{h.title || 'Conversation'}</span>
+              <button className="delete-history-btn" onClick={(e) => deleteOldChat(e, h.id)}>
+                🗑️
+              </button>
             </div>
           ))}
         </div>
@@ -275,4 +288,4 @@ export default function DatingCoach({ session }) {
       </div>
     </div>
   )
-    }
+                   }

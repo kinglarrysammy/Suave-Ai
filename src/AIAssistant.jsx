@@ -60,54 +60,25 @@ export default function AIAssistant() {
       <div className="brand">✨ AI Assistant</div>
       <div className="subtext">Ask anything — general knowledge and information.</div>
 
-      <div
-        style={{
-          background: 'var(--surface)',
-          border: '1px solid var(--border)',
-          borderRadius: 16,
-          padding: 14,
-          height: 400,
-          overflowY: 'auto',
-          marginBottom: 12,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-        }}
-      >
+      <div className="chat-window">
         {messages.length === 0 && (
-          <p className="subtext" style={{ textAlign: 'center', marginTop: 40 }}>
+          <div className="chat-empty">
+            <span className="chat-empty-icon">✨</span>
             Ask me anything.
-          </p>
+          </div>
         )}
         {messages.map((m, i) => (
-          <div
-            key={i}
-            style={{
-              alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: '80%',
-              background: m.role === 'user' ? 'var(--gold-soft)' : 'var(--surface-hover)',
-              color: m.role === 'user' ? 'var(--gold)' : 'var(--text)',
-              border: '1px solid var(--border)',
-              borderRadius: 12,
-              padding: '10px 14px',
-              fontSize: 14,
-              lineHeight: 1.4,
-            }}
-          >
+          <div key={i} className={`chat-bubble ${m.role}`}>
             {m.content}
           </div>
         ))}
-        {loading && (
-          <div style={{ alignSelf: 'flex-start', color: 'var(--text-dim)', fontSize: 13, fontStyle: 'italic' }}>
-            Typing...
-          </div>
-        )}
+        {loading && <div className="chat-typing">Typing...</div>}
         <div ref={scrollRef} />
       </div>
 
       {error && <p className="error-text">{error}</p>}
 
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div className="chat-input-row">
         <input
           placeholder="Type a message..."
           value={input}
@@ -116,14 +87,13 @@ export default function AIAssistant() {
           disabled={loading}
         />
         <button
-          className="btn-primary"
+          className="chat-send-btn"
           onClick={sendMessage}
           disabled={!input.trim() || loading}
-          style={{ flexShrink: 0 }}
         >
-          Send
+          ➤
         </button>
       </div>
     </div>
   )
-          }
+}

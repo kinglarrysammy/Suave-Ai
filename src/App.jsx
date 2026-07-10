@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 import SavedTab from './SavedTab'
 import ReplyGenerator from './ReplyGenerator'
+import DatingCoach from './DatingCoach'
+import AIAssistant from './AIAssistant'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -40,30 +42,35 @@ export default function App() {
   if (session) {
     return (
       <div className="app-shell">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
-            <div className="brand" style={{ marginBottom: 0 }}>Suave</div>
-            <div className="subtext" style={{ marginBottom: 0 }}>{session.user.email}</div>
+            <div className="brand" style={{ marginBottom: 0, fontSize: 22 }}>Suave</div>
           </div>
           <button className="btn-secondary" onClick={handleLogout}>Log out</button>
         </div>
 
         <div className="navbar">
-          <button
-            className={activeTab === 'reply' ? 'active' : ''}
-            onClick={() => setActiveTab('reply')}
-          >
+          <button className={activeTab === 'reply' ? 'active' : ''} onClick={() => setActiveTab('reply')}>
+            <span className="nav-icon">↩️</span>
             Reply
           </button>
-          <button
-            className={activeTab === 'saved' ? 'active' : ''}
-            onClick={() => setActiveTab('saved')}
-          >
+          <button className={activeTab === 'coach' ? 'active' : ''} onClick={() => setActiveTab('coach')}>
+            <span className="nav-icon">💘</span>
+            Coach
+          </button>
+          <button className={activeTab === 'assistant' ? 'active' : ''} onClick={() => setActiveTab('assistant')}>
+            <span className="nav-icon">✨</span>
+            Assistant
+          </button>
+          <button className={activeTab === 'saved' ? 'active' : ''} onClick={() => setActiveTab('saved')}>
+            <span className="nav-icon">🔖</span>
             Saved
           </button>
         </div>
 
         {activeTab === 'reply' && <ReplyGenerator />}
+        {activeTab === 'coach' && <DatingCoach />}
+        {activeTab === 'assistant' && <AIAssistant />}
         {activeTab === 'saved' && <SavedTab session={session} />}
       </div>
     )
@@ -102,4 +109,4 @@ export default function App() {
       </div>
     </div>
   )
-}
+      }

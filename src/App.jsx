@@ -4,6 +4,7 @@ import SavedTab from './SavedTab'
 import ReplyGenerator from './ReplyGenerator'
 import DatingCoach from './DatingCoach'
 import AIAssistant from './AIAssistant'
+import InstallButton from './InstallButton'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -49,6 +50,8 @@ export default function App() {
           <button className="btn-secondary" onClick={handleLogout}>Log out</button>
         </div>
 
+        <InstallButton />
+
         <div className="navbar">
           <button className={activeTab === 'reply' ? 'active' : ''} onClick={() => setActiveTab('reply')}>
             <span className="nav-icon">↩️</span>
@@ -68,8 +71,8 @@ export default function App() {
           </button>
         </div>
 
-        {activeTab === 'reply' && <ReplyGenerator />}
-        {activeTab === 'coach' && <DatingCoach />}
+        {activeTab === 'reply' && <ReplyGenerator session={session} />}
+        {activeTab === 'coach' && <DatingCoach session={session} />}
         {activeTab === 'assistant' && <AIAssistant />}
         {activeTab === 'saved' && <SavedTab session={session} />}
       </div>
@@ -109,4 +112,4 @@ export default function App() {
       </div>
     </div>
   )
-      }
+        }

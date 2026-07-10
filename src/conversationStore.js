@@ -54,3 +54,8 @@ export async function saveConversation({ id, userId, mode, messages }) {
     return { id: data?.id, error }
   }
 }
+
+export async function deleteConversation(id) {
+  const { error } = await supabase.from('conversations').delete().eq('id', id)
+  return { error }
+}

@@ -76,19 +76,16 @@ input:focus, select:focus {
   border-color: var(--gold);
 }
 
-/* Login screen wrapper (scrollable, centered) */
 .app-shell {
   max-width: 520px;
   margin: 0 auto;
   padding: 16px 16px 30px;
 }
 
-/* Logged-in dashboard: locked to one screen height, no outer scroll */
 .dashboard-shell {
   max-width: 520px;
   margin: 0 auto;
-  height: 100vh;
-  height: 100dvh;
+  height: var(--app-height, 100vh);
   display: flex;
   flex-direction: column;
   padding: 16px 16px 12px;
@@ -279,7 +276,6 @@ input:focus, select:focus {
   border: 1px solid var(--border);
 }
 
-/* Chat page: fills whatever space dashboard-content gives it */
 .chat-page {
   height: 100%;
   display: flex;

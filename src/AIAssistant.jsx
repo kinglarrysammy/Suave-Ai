@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useSpeechToText } from './useSpeechToText'
 
 const SYSTEM_PROMPT =
   'You are a helpful, knowledgeable general-purpose assistant. Answer questions on any topic clearly and accurately. Keep responses concise unless the user asks for detail.'
@@ -9,10 +10,21 @@ export default function AIAssistant() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const scrollRef = useRef(null)
+  const { isListening, error: micError, startListening, stopListening } = useSpeechToText()
 
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  const handleMicClick = () => {
+    if (isListening) {
+      stopListening()
+      return
+    }
+    startListening((transcript) => {
+      setInput((prev) => (prev ? prev + ' ' + transcript : transcript))
+    })
+  }
 
   const sendMessage = async () => {
     if (!input.trim() || loading) return
@@ -77,10 +89,18 @@ export default function AIAssistant() {
       </div>
 
       {error && <p className="error-text">{error}</p>}
+      {micError && <p className="error-text">{micError}</p>}
 
       <div className="chat-input-row">
+        <button
+          className={`mic-btn ${isListening ? 'listening' : ''}`}
+          onClick={handleMicClick}
+          type="button"
+        >
+          🎤
+        </button>
         <input
-          placeholder="Type a message..."
+          placeholder={isListening ? 'Listening...' : 'Type a message...'}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

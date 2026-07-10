@@ -11,9 +11,9 @@ export default function ReplyGenerator() {
   const [image, setImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [tone, setTone] = useState('flirty')
-  const [myBubbleSide, setMyBubbleSide] = useState('right')
   const [replies, setReplies] = useState([])
   const [loading, setLoading] = useState(false)
+  const [loadingStep, setLoadingStep] = useState('')
   const [error, setError] = useState('')
 
   const handleImageChange = (e) => {
@@ -33,63 +33,99 @@ export default function ReplyGenerator() {
       reader.onerror = reject
     })
 
+  const callGroq = async (messages, maxTokens = 500) => {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        messages,
+        max_tokens: maxTokens,
+      }),
+    })
+    const data = await response.json()
+    return data.choices?.[0]?.message?.content || ''
+  }
+
   const generateReplies = async () => {
     if (!image) return
     setLoading(true)
     setError('')
     setReplies([])
 
-    const otherSide = myBubbleSide === 'right' ? 'LEFT' : 'RIGHT'
-    const mySide = myBubbleSide.toUpperCase()
-
     try {
       const base64Image = await toBase64(image)
 
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
-          messages: [
+      setLoadingStep('Reading the conversation...')
+      const transcriptRaw = await callGroq([
+        {
+          role: 'user',
+          content: [
             {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: `This is a chat screenshot. The user has confirmed: their own messages appear on the ${mySide} side of the screen. The other person's messages appear on the ${otherSide} side of the screen.
+              type: 'text',
+              text: `Transcribe this chat screenshot. List every message bubble you can see, in top-to-bottom order.
+For each one, output a line in this exact format:
+LEFT: <message text>
+or
+RIGHT: <message text>
 
-STEP 1: Find the bubble positioned lowest on the screen (the most recent message) that is on the ${otherSide} side. That is the other person's latest message — this is what you must respond to.
-
-STEP 2: Ignore any ${mySide}-side bubbles when deciding what to reply to — those are messages the user already sent, not something to respond to.
-
-STEP 3: Write 3 different reply options, in a ${tone} tone, that the user (${mySide} side) could send back to directly address that ${otherSide}-side message.
-
-Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, no extra text.`,
-                },
-                {
-                  type: 'image_url',
-                  image_url: { url: `data:image/jpeg;base64,${base64Image}` },
-                },
-              ],
+Use LEFT for messages aligned to the left side of the screen, and RIGHT for messages aligned to the right side of the screen (usually green/blue bubbles). Do not add commentary, do not summarize, do not skip any message. Just the labeled list.`,
+            },
+            {
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${base64Image}` },
             },
           ],
-          max_tokens: 500,
-        }),
-      })
+        },
+      ], 600)
 
-      const data = await response.json()
-      const text = data.choices?.[0]?.message?.content || '[]'
-      const clean = text.replace(/```json|```/g, '').trim()
+      if (!transcriptRaw.trim()) {
+        throw new Error('Could not read the conversation from the image.')
+      }
+
+      const lines = transcriptRaw
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith('LEFT:') || l.startsWith('RIGHT:'))
+
+      const lastLeftLine = [...lines].reverse().find((l) => l.startsWith('LEFT:'))
+      const herLastMessage = lastLeftLine
+        ? lastLeftLine.replace('LEFT:', '').trim()
+        : null
+
+      if (!herLastMessage) {
+        throw new Error('Could not identify the other person\'s message. Try a clearer screenshot.')
+      }
+
+      setLoadingStep('Writing replies...')
+      const replyRaw = await callGroq([
+        {
+          role: 'user',
+          content: `Here is a chat transcript for context:
+${lines.join('\n')}
+
+The other person's most recent message is: "${herLastMessage}"
+
+Write 3 different reply options, in a ${tone} tone, that directly and naturally respond to that message, fitting the flow of the conversation.
+
+Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
+          },
+        ],
+        500,
+      )
+
+      const clean = replyRaw.replace(/```json|```/g, '').trim()
       const parsed = JSON.parse(clean)
       setReplies(parsed)
     } catch (err) {
-      setError('Failed to generate replies. Try again.')
+      setError(err.message || 'Failed to generate replies. Try again.')
       console.error(err)
     } finally {
       setLoading(false)
+      setLoadingStep('')
     }
   }
 
@@ -105,24 +141,6 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, no e
           Upload your image
           <input type="file" accept="image/*" onChange={handleImageChange} />
         </label>
-      </div>
-
-      <div style={{ marginBottom: 20 }}>
-        <p className="subtext" style={{ marginBottom: 8 }}>Which side are YOUR messages on?</p>
-        <div className="tone-grid">
-          <div
-            className={`tone-card ${myBubbleSide === 'right' ? 'selected' : ''}`}
-            onClick={() => setMyBubbleSide('right')}
-          >
-            My bubbles: Right
-          </div>
-          <div
-            className={`tone-card ${myBubbleSide === 'left' ? 'selected' : ''}`}
-            onClick={() => setMyBubbleSide('left')}
-          >
-            My bubbles: Left
-          </div>
-        </div>
       </div>
 
       <div className="tone-grid">
@@ -143,7 +161,7 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, no e
         disabled={!image || loading}
         style={{ width: '100%', padding: '14px' }}
       >
-        {loading ? 'Generating...' : 'Generate Replies'}
+        {loading ? loadingStep || 'Generating...' : 'Generate Replies'}
       </button>
 
       {error && <p className="error-text">{error}</p>}
@@ -159,4 +177,4 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, no e
       )}
     </div>
   )
-        }
+              }

@@ -94,6 +94,7 @@ input::placeholder, textarea::placeholder {
   flex-direction: column;
   padding: 16px 16px 12px;
   overflow: hidden;
+  position: relative;
 }
 
 .dashboard-header {
@@ -537,4 +538,41 @@ input::placeholder, textarea::placeholder {
 .save-btn.saved {
   color: var(--gold);
   border-color: var(--gold);
-    }
+}
+
+.feedback-fab {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  color: #16130f;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  z-index: 50;
+  padding: 0;
+}
+
+.feedback-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 100;
+}
+
+.feedback-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+  width: 100%;
+  max-width: 520px;
+  }

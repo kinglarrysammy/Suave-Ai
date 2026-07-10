@@ -40,41 +40,45 @@ export default function App() {
     await supabase.auth.signOut()
   }
 
+  const isChatTab = activeTab === 'coach' || activeTab === 'assistant'
+
   if (session) {
     return (
-      <div className="app-shell">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <div>
+      <div className="dashboard-shell">
+        <div className="dashboard-header">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div className="brand" style={{ marginBottom: 0, fontSize: 22 }}>Suave</div>
+            <button className="btn-secondary" onClick={handleLogout}>Log out</button>
           </div>
-          <button className="btn-secondary" onClick={handleLogout}>Log out</button>
+
+          <InstallButton />
+
+          <div className="navbar">
+            <button className={activeTab === 'reply' ? 'active' : ''} onClick={() => setActiveTab('reply')}>
+              <span className="nav-icon">↩️</span>
+              Reply
+            </button>
+            <button className={activeTab === 'coach' ? 'active' : ''} onClick={() => setActiveTab('coach')}>
+              <span className="nav-icon">💘</span>
+              Coach
+            </button>
+            <button className={activeTab === 'assistant' ? 'active' : ''} onClick={() => setActiveTab('assistant')}>
+              <span className="nav-icon">✨</span>
+              Assistant
+            </button>
+            <button className={activeTab === 'saved' ? 'active' : ''} onClick={() => setActiveTab('saved')}>
+              <span className="nav-icon">🔖</span>
+              Saved
+            </button>
+          </div>
         </div>
 
-        <InstallButton />
-
-        <div className="navbar">
-          <button className={activeTab === 'reply' ? 'active' : ''} onClick={() => setActiveTab('reply')}>
-            <span className="nav-icon">↩️</span>
-            Reply
-          </button>
-          <button className={activeTab === 'coach' ? 'active' : ''} onClick={() => setActiveTab('coach')}>
-            <span className="nav-icon">💘</span>
-            Coach
-          </button>
-          <button className={activeTab === 'assistant' ? 'active' : ''} onClick={() => setActiveTab('assistant')}>
-            <span className="nav-icon">✨</span>
-            Assistant
-          </button>
-          <button className={activeTab === 'saved' ? 'active' : ''} onClick={() => setActiveTab('saved')}>
-            <span className="nav-icon">🔖</span>
-            Saved
-          </button>
+        <div className={`dashboard-content ${isChatTab ? 'chat-mode' : ''}`}>
+          {activeTab === 'reply' && <ReplyGenerator session={session} />}
+          {activeTab === 'coach' && <DatingCoach session={session} />}
+          {activeTab === 'assistant' && <AIAssistant session={session} />}
+          {activeTab === 'saved' && <SavedTab session={session} />}
         </div>
-
-        {activeTab === 'reply' && <ReplyGenerator session={session} />}
-        {activeTab === 'coach' && <DatingCoach session={session} />}
-        {activeTab === 'assistant' && <AIAssistant />}
-        {activeTab === 'saved' && <SavedTab session={session} />}
       </div>
     )
   }
@@ -112,4 +116,4 @@ export default function App() {
       </div>
     </div>
   )
-        }
+}

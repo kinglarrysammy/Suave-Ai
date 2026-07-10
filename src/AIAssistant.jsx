@@ -1,15 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSpeechToText } from './useSpeechToText'
-import { supabase } from './supabaseClient'
 import { getLatestConversation, listConversations, getConversation, saveConversation } from './conversationStore'
 
-const SYSTEM_PROMPT = `You are a supportive, insightful dating coach. Your job is to help the user with real dating situations — approaching a crush, texting someone new, DMing someone on social media, keeping a conversation going, or figuring out if someone is interested.
+const SYSTEM_PROMPT =
+  'You are a helpful, knowledgeable general-purpose assistant. Answer questions on any topic clearly and accurately. If the user sends an image, look at it carefully and answer based on what you actually see in it. Keep responses concise unless the user asks for detail.'
 
-Important: Do not immediately generate lines or advice on the first message if the situation is unclear. First ask 1-3 short clarifying questions to understand: who the person is (how they know them, what platform), what the user's goal is (start a conversation, ask them out, keep it going), and what vibe they want (playful, sincere, confident). Once you have enough context, give clear, practical advice and, if relevant, 2-3 example messages the user could send.
-
-Keep every response concise and conversational. Stay strictly focused on dating and relationships — do not answer unrelated general knowledge questions.`
-
-export default function DatingCoach({ session }) {
+export default function AIAssistant({ session }) {
   const [messages, setMessages] = useState([])
   const [conversationId, setConversationId] = useState(null)
   const [history, setHistory] = useState([])
@@ -19,13 +15,12 @@ export default function DatingCoach({ session }) {
   const [imagePreview, setImagePreview] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [savedIndices, setSavedIndices] = useState([])
   const scrollRef = useRef(null)
   const { isListening, error: micError, startListening, stopListening } = useSpeechToText()
 
   useEffect(() => {
     if (!session) return
-    getLatestConversation(session.user.id, 'coach').then((convo) => {
+    getLatestConversation(session.user.id, 'assistant').then((convo) => {
       if (convo) {
         setMessages(convo.messages || [])
         setConversationId(convo.id)
@@ -42,7 +37,7 @@ export default function DatingCoach({ session }) {
     const { id } = await saveConversation({
       id: conversationId,
       userId: session.user.id,
-      mode: 'coach',
+      mode: 'assistant',
       messages: updatedMessages,
     })
     if (id && !conversationId) setConversationId(id)
@@ -58,7 +53,7 @@ export default function DatingCoach({ session }) {
 
   const openHistory = async () => {
     if (!showHistory && session) {
-      const list = await listConversations(session.user.id, 'coach')
+      const list = await listConversations(session.user.id, 'assistant')
       setHistory(list)
     }
     setShowHistory(!showHistory)
@@ -103,7 +98,7 @@ export default function DatingCoach({ session }) {
     setLoading(true)
     setError('')
 
-    let userContent = input.trim() || 'Take a look at this.'
+    const userContent = input.trim() || 'Take a look at this.'
     let apiContent = userContent
 
     try {
@@ -161,23 +156,10 @@ export default function DatingCoach({ session }) {
     }
   }
 
-  const saveMessage = async (index, content) => {
-    if (!session) return
-    const { error } = await supabase.from('saved_items').insert({
-      user_id: session.user.id,
-      type: 'Dating Coach',
-      content,
-    })
-    if (!error) setSavedIndices((prev) => [...prev, index])
-  }
-
   return (
     <div className="chat-page">
-      <div className="brand">💘 Dating Coach</div>
-      <div className="subtext" style={{ marginBottom: 10 }}>
-        Have a crush but don't know how to approach? Tell me the situation and I'll help you
-        craft the right message.
-      </div>
+      <div className="brand">✨ AI Assistant</div>
+      <div className="subtext">Ask anything, or send an image and ask about it.</div>
 
       <div className="chat-toolbar">
         <button className="btn-secondary" onClick={startNewChat}>+ New Chat</button>
@@ -198,23 +180,13 @@ export default function DatingCoach({ session }) {
       <div className="chat-window">
         {messages.length === 0 && (
           <div className="chat-empty">
-            <span className="chat-empty-icon">💘</span>
-            Example: "I found this girl's page on Instagram and want to DM her but don't know
-            what to say." I'll ask a couple questions, then craft the message for you.
+            <span className="chat-empty-icon">✨</span>
+            Ask me anything, or attach a photo and ask a question about it.
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i}>
-            <div className={`chat-bubble ${m.role}`}>{m.content}</div>
-            {m.role === 'assistant' && (
-              <button
-                className={`save-btn ${savedIndices.includes(i) ? 'saved' : ''}`}
-                onClick={() => saveMessage(i, m.content)}
-                disabled={savedIndices.includes(i)}
-              >
-                {savedIndices.includes(i) ? '✓ Saved' : '💾 Save'}
-              </button>
-            )}
+          <div key={i} className={`chat-bubble ${m.role}`}>
+            {m.content}
           </div>
         ))}
         {loading && <div className="chat-typing">Typing...</div>}
@@ -251,7 +223,7 @@ export default function DatingCoach({ session }) {
           🎤
         </button>
         <input
-          placeholder={isListening ? 'Listening...' : 'Tell me the situation...'}
+          placeholder={isListening ? 'Listening...' : 'Type a message...'}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -267,4 +239,4 @@ export default function DatingCoach({ session }) {
       </div>
     </div>
   )
-        }
+      }

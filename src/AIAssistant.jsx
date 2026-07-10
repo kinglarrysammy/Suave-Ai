@@ -1,11 +1,13 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSpeechToText } from './useSpeechToText'
 import { getLatestConversation, listConversations, getConversation, saveConversation, deleteConversation } from './conversationStore'
+import ImageCreate from './ImageCreate'
 
 const SYSTEM_PROMPT =
   'You are a helpful, knowledgeable general-purpose assistant. Answer questions on any topic clearly and accurately. If the user sends an image, look at it carefully and answer based on what you actually see in it. Keep responses concise unless the user asks for detail.'
 
 export default function AIAssistant({ session }) {
+  const [view, setView] = useState('chat')
   const [messages, setMessages] = useState([])
   const [conversationId, setConversationId] = useState(null)
   const [history, setHistory] = useState([])
@@ -176,90 +178,111 @@ export default function AIAssistant({ session }) {
 
   return (
     <div className="chat-page">
-      <div className="brand">✨ AI Assistant</div>
-      <div className="subtext">Ask anything, or send an image and ask about it.</div>
-
-      <div className="chat-toolbar">
-        <button className="btn-secondary" onClick={startNewChat}>+ New Chat</button>
-        <button className="btn-secondary" onClick={openHistory}>🕐 History</button>
+      <div className="mode-grid" style={{ marginBottom: 12 }}>
+        <div
+          className={`tone-card ${view === 'chat' ? 'selected' : ''}`}
+          onClick={() => setView('chat')}
+        >
+          💬 Ask Anything
+        </div>
+        <div
+          className={`tone-card ${view === 'image' ? 'selected' : ''}`}
+          onClick={() => setView('image')}
+        >
+          🎨 Create Image
+        </div>
       </div>
 
-      {showHistory && (
-        <div className="history-panel">
-          {history.length === 0 && <p className="history-empty">No past conversations yet.</p>}
-          {history.map((h) => (
-            <div key={h.id} className="history-item" onClick={() => loadOldChat(h.id)}>
-              <span style={{ flex: 1 }}>{h.title || 'Conversation'}</span>
-              <button className="delete-history-btn" onClick={(e) => deleteOldChat(e, h.id)}>
-                🗑️
+      {view === 'image' && <ImageCreate session={session} />}
+
+      {view === 'chat' && (
+        <>
+          <div className="brand">✨ AI Assistant</div>
+          <div className="subtext">Ask anything, or send an image and ask about it.</div>
+
+          <div className="chat-toolbar">
+            <button className="btn-secondary" onClick={startNewChat}>+ New Chat</button>
+            <button className="btn-secondary" onClick={openHistory}>🕐 History</button>
+          </div>
+
+          {showHistory && (
+            <div className="history-panel">
+              {history.length === 0 && <p className="history-empty">No past conversations yet.</p>}
+              {history.map((h) => (
+                <div key={h.id} className="history-item" onClick={() => loadOldChat(h.id)}>
+                  <span style={{ flex: 1 }}>{h.title || 'Conversation'}</span>
+                  <button className="delete-history-btn" onClick={(e) => deleteOldChat(e, h.id)}>
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="chat-window">
+            {messages.length === 0 && (
+              <div className="chat-empty">
+                <span className="chat-empty-icon">✨</span>
+                Ask me anything, or attach a photo and ask a question about it.
+              </div>
+            )}
+            {messages.map((m, i) => (
+              <div key={i} className={`chat-bubble ${m.role}`}>
+                {m.content}
+              </div>
+            ))}
+            {loading && <div className="chat-typing">Typing...</div>}
+            <div ref={scrollRef} />
+          </div>
+
+          {error && <p className="error-text">{error}</p>}
+          {micError && <p className="error-text">{micError}</p>}
+
+          {imagePreview && (
+            <div className="attach-preview">
+              <img src={imagePreview} alt="attached" />
+              <span>Image attached</span>
+              <button
+                className="btn-secondary"
+                style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 11 }}
+                onClick={() => { setImage(null); setImagePreview(null) }}
+              >
+                Remove
               </button>
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      <div className="chat-window">
-        {messages.length === 0 && (
-          <div className="chat-empty">
-            <span className="chat-empty-icon">✨</span>
-            Ask me anything, or attach a photo and ask a question about it.
+          <div className="chat-input-row">
+            <label className="attach-btn">
+              📎
+              <input type="file" accept="image/*" onChange={handleImageSelect} />
+            </label>
+            <button
+              className={`mic-btn ${isListening ? 'listening' : ''}`}
+              onClick={handleMicClick}
+              type="button"
+            >
+              🎤
+            </button>
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              placeholder={isListening ? 'Listening...' : 'Type a message...'}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={loading}
+            />
+            <button
+              className="chat-send-btn"
+              onClick={sendMessage}
+              disabled={(!input.trim() && !image) || loading}
+            >
+              ➤
+            </button>
           </div>
-        )}
-        {messages.map((m, i) => (
-          <div key={i} className={`chat-bubble ${m.role}`}>
-            {m.content}
-          </div>
-        ))}
-        {loading && <div className="chat-typing">Typing...</div>}
-        <div ref={scrollRef} />
-      </div>
-
-      {error && <p className="error-text">{error}</p>}
-      {micError && <p className="error-text">{micError}</p>}
-
-      {imagePreview && (
-        <div className="attach-preview">
-          <img src={imagePreview} alt="attached" />
-          <span>Image attached</span>
-          <button
-            className="btn-secondary"
-            style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 11 }}
-            onClick={() => { setImage(null); setImagePreview(null) }}
-          >
-            Remove
-          </button>
-        </div>
+        </>
       )}
-
-      <div className="chat-input-row">
-        <label className="attach-btn">
-          📎
-          <input type="file" accept="image/*" onChange={handleImageSelect} />
-        </label>
-        <button
-          className={`mic-btn ${isListening ? 'listening' : ''}`}
-          onClick={handleMicClick}
-          type="button"
-        >
-          🎤
-        </button>
-        <textarea
-          ref={textareaRef}
-          rows={1}
-          placeholder={isListening ? 'Listening...' : 'Type a message...'}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={loading}
-        />
-        <button
-          className="chat-send-btn"
-          onClick={sendMessage}
-          disabled={(!input.trim() && !image) || loading}
-        >
-          ➤
-        </button>
-      </div>
     </div>
   )
-    }
+      }

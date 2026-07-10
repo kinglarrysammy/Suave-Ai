@@ -1,4 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="90" fill="#16130f"/>
-  <text x="50%" y="58%" font-family="Arial, sans-serif" font-size="260" font-weight="700" fill="#d4a94a" text-anchor="middle">S</text>
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e8c874"/>
+      <stop offset="100%" stop-color="#c9973a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="110" fill="#16130f"/>
+
+  <path d="M 340 130
+           C 260 110, 165 130, 165 195
+           C 165 250, 240 260, 300 270
+           C 370 282, 360 340, 300 355
+           C 240 370, 175 355, 150 320"
+        fill="none"
+        stroke="url(#goldGrad)"
+        stroke-width="34"
+        stroke-linecap="round"/>
+
+  <circle cx="378" cy="150" r="9" fill="#e8c874"/>
+  <circle cx="395" cy="178" r="5" fill="#e8c874" opacity="0.7"/>
 </svg>

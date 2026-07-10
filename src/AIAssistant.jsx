@@ -16,6 +16,7 @@ export default function AIAssistant({ session }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const scrollRef = useRef(null)
+  const textareaRef = useRef(null)
   const { isListening, error: micError, startListening, stopListening } = useSpeechToText()
 
   useEffect(() => {
@@ -31,6 +32,13 @@ export default function AIAssistant({ session }) {
   useEffect(() => {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
+    }
+  }, [input])
 
   const persist = async (updatedMessages) => {
     if (!session) return
@@ -222,7 +230,9 @@ export default function AIAssistant({ session }) {
         >
           🎤
         </button>
-        <input
+        <textarea
+          ref={textareaRef}
+          rows={1}
           placeholder={isListening ? 'Listening...' : 'Type a message...'}
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -239,4 +249,4 @@ export default function AIAssistant({ session }) {
       </div>
     </div>
   )
-      }
+          }

@@ -27,7 +27,7 @@ export default function FeedbackButton({ session }) {
 
   return (
     <>
-      <button className="feedback-fab" onClick={() => setOpen(true)}>
+      <button className="btn-secondary" onClick={() => setOpen(true)} style={{ padding: '10px 12px' }}>
         💬
       </button>
 

@@ -542,20 +542,22 @@ input::placeholder, textarea::placeholder {
 
 .feedback-fab {
   position: absolute;
-  bottom: 16px;
-  right: 16px;
-  width: 52px;
-  height: 52px;
+  bottom: 14px;
+  left: 14px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--gold-light), var(--gold));
-  color: #16130f;
-  font-size: 22px;
+  background: var(--surface);
+  border: 1.5px solid var(--gold);
+  color: var(--gold);
+  font-size: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 14px rgba(0,0,0,0.4);
   z-index: 50;
   padding: 0;
+  opacity: 0.85;
 }
 
 .feedback-overlay {

@@ -49,7 +49,10 @@ export default function App() {
         <div className="dashboard-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div className="brand" style={{ marginBottom: 0, fontSize: 22 }}>Suave</div>
-            <button className="btn-secondary" onClick={handleLogout}>Log out</button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <FeedbackButton session={session} />
+              <button className="btn-secondary" onClick={handleLogout}>Log out</button>
+            </div>
           </div>
 
           <InstallButton />
@@ -80,8 +83,6 @@ export default function App() {
           {activeTab === 'assistant' && <AIAssistant session={session} />}
           {activeTab === 'saved' && <SavedTab session={session} />}
         </div>
-
-        <FeedbackButton session={session} />
       </div>
     )
   }
@@ -119,4 +120,4 @@ export default function App() {
       </div>
     </div>
   )
-}
+          }

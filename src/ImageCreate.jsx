@@ -150,6 +150,10 @@ Include specifics on: subject and pose, composition and framing, lighting, color
         {loading ? loadingStep || 'Generating...' : '✨ Generate Image ✨'}
       </button>
 
+      <p className="subtext" style={{ marginTop: 10, textAlign: 'center' }}>
+        Uses a free image server — can take 10-30 seconds, sometimes longer during busy periods.
+      </p>
+
       {error && <p className="error-text">{error}</p>}
 
       {imageUrl && (
@@ -182,4 +186,4 @@ Include specifics on: subject and pose, composition and framing, lighting, color
       )}
     </div>
   )
-                      }
+          }

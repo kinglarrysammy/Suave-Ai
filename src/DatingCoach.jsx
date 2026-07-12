@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useSpeechToText } from './useSpeechToText'
 import { supabase } from './supabaseClient'
 import { getLatestConversation, listConversations, getConversation, saveConversation, deleteConversation } from './conversationStore'
+import { consumeUsage } from './usageLimiter'
 
 const SYSTEM_PROMPT = `You are a supportive, insightful dating coach. Your job is to help the user with real dating situations — approaching a crush, texting someone new, DMing someone on social media, keeping a conversation going, or figuring out if someone is interested.
 
@@ -118,6 +119,13 @@ export default function DatingCoach({ session }) {
 
   const sendMessage = async () => {
     if ((!input.trim() && !image) || loading) return
+
+    const usage = await consumeUsage(session)
+    if (!usage.allowed) {
+      setError(usage.message)
+      return
+    }
+
     setLoading(true)
     setError('')
 
@@ -288,4 +296,4 @@ export default function DatingCoach({ session }) {
       </div>
     </div>
   )
-                   }
+                        }

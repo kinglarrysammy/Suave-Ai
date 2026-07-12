@@ -6,6 +6,7 @@ import DatingCoach from './DatingCoach'
 import AIAssistant from './AIAssistant'
 import InstallButton from './InstallButton'
 import FeedbackButton from './FeedbackButton'
+import ProfileButton from './ProfileButton'
 import ResetPassword from './ResetPassword'
 import OnboardingModal from './OnboardingModal'
 
@@ -77,6 +78,7 @@ export default function App() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div className="brand" style={{ marginBottom: 0, fontSize: 22 }}>Suave</div>
             <div style={{ display: 'flex', gap: 8 }}>
+              <ProfileButton session={session} />
               <FeedbackButton session={session} />
               <button className="btn-secondary" onClick={handleLogout}>Log out</button>
             </div>
@@ -155,4 +157,4 @@ export default function App() {
       </div>
     </div>
   )
-               }
+}

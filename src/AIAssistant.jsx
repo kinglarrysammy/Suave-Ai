@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useSpeechToText } from './useSpeechToText'
 import { getLatestConversation, listConversations, getConversation, saveConversation, deleteConversation } from './conversationStore'
+import { consumeUsage } from './usageLimiter'
 import ImageCreate from './ImageCreate'
 
 const SYSTEM_PROMPT =
@@ -115,6 +116,13 @@ export default function AIAssistant({ session }) {
 
   const sendMessage = async () => {
     if ((!input.trim() && !image) || loading) return
+
+    const usage = await consumeUsage(session)
+    if (!usage.allowed) {
+      setError(usage.message)
+      return
+    }
+
     setLoading(true)
     setError('')
 
@@ -285,4 +293,4 @@ export default function AIAssistant({ session }) {
       )}
     </div>
   )
-      }
+        }

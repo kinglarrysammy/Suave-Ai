@@ -6,6 +6,8 @@ import DatingCoach from './DatingCoach'
 import AIAssistant from './AIAssistant'
 import InstallButton from './InstallButton'
 import FeedbackButton from './FeedbackButton'
+import ResetPassword from './ResetPassword'
+import OnboardingModal from './OnboardingModal'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -14,11 +16,18 @@ export default function App() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [activeTab, setActiveTab] = useState('reply')
+  const [isRecovery, setIsRecovery] = useState(false)
 
   useEffect(() => {
+    if (window.location.hash.includes('type=recovery')) {
+      setIsRecovery(true)
+    }
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecovery(true)
+      }
     })
     return () => listener.subscription.unsubscribe()
   }, [])
@@ -37,15 +46,33 @@ export default function App() {
     setLoading(false)
   }
 
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setMessage('Enter your email above first, then tap "Forgot password?"')
+      return
+    }
+    setLoading(true)
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin,
+    })
+    setLoading(false)
+    setMessage(error ? error.message : 'Check your email for a password reset link.')
+  }
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
   }
 
   const isChatTab = activeTab === 'coach' || activeTab === 'assistant'
 
+  if (isRecovery) {
+    return <ResetPassword />
+  }
+
   if (session) {
     return (
       <div className="dashboard-shell">
+        <OnboardingModal />
         <div className="dashboard-header">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div className="brand" style={{ marginBottom: 0, fontSize: 22 }}>Suave</div>
@@ -106,8 +133,16 @@ export default function App() {
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          style={{ marginBottom: 14 }}
+          style={{ marginBottom: 8 }}
         />
+        <button
+          className="btn-secondary"
+          onClick={handleForgotPassword}
+          disabled={loading}
+          style={{ width: '100%', marginBottom: 14, fontSize: 12, padding: 8 }}
+        >
+          Forgot password?
+        </button>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn-primary" onClick={handleSignIn} disabled={loading} style={{ flex: 1 }}>
             Log In
@@ -120,4 +155,4 @@ export default function App() {
       </div>
     </div>
   )
-          }
+               }

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from './supabaseClient'
+import { consumeUsage } from './usageLimiter'
 
 const STYLES = [
   { key: 'realistic', emoji: '📷', label: 'Realistic' },
@@ -36,6 +37,13 @@ export default function ImageCreate({ session }) {
 
   const generateImage = async () => {
     if (!idea.trim() || loading) return
+
+    const usage = await consumeUsage(session)
+    if (!usage.allowed) {
+      setError(usage.message)
+      return
+    }
+
     setLoading(true)
     setError('')
     setImageUrl('')
@@ -186,4 +194,4 @@ Include specifics on: subject and pose, composition and framing, lighting, color
       )}
     </div>
   )
-          }
+}

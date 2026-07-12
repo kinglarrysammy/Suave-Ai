@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from './supabaseClient'
+import { consumeUsage } from './usageLimiter'
 
 const TONES = [
   { key: 'flirty', emoji: '😏', label: 'Flirty' },
@@ -55,6 +56,13 @@ export default function ReplyGenerator({ session }) {
 
   const generateReplies = async () => {
     if (!image) return
+
+    const usage = await consumeUsage(session)
+    if (!usage.allowed) {
+      setError(usage.message)
+      return
+    }
+
     setLoading(true)
     setError('')
     setReplies([])
@@ -69,13 +77,13 @@ export default function ReplyGenerator({ session }) {
           content: [
             {
               type: 'text',
-              text: `Transcribe this chat screenshot. List every message bubble you can see, in top-to-bottom order.
+              text: `Transcribe this chat screenshot. This could be from any messaging app (WhatsApp, iMessage, Instagram DM, Messenger, Telegram, Snapchat, Tinder, SMS, or any other). List every message bubble you can see, in top-to-bottom order.
 For each one, output a line in this exact format:
 LEFT: <message text>
 or
 RIGHT: <message text>
 
-Use LEFT for messages aligned to the left side of the screen, and RIGHT for messages aligned to the right side of the screen (usually green/blue bubbles). Do not add commentary, do not summarize, do not skip any message. Just the labeled list.`,
+Determine LEFT vs RIGHT purely by which side of the screen the bubble is positioned on — ignore bubble color, since different apps use different color schemes (WhatsApp green, iMessage blue, Instagram gradient, etc). Do not add commentary, do not summarize, do not skip any message. Just the labeled list.`,
             },
             {
               type: 'image_url',
@@ -145,7 +153,7 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
   return (
     <div>
       <div className="brand">Reply Generator</div>
-      <div className="subtext">Upload a chat screenshot, pick a vibe, get replies.</div>
+      <div className="subtext">Upload a chat screenshot from any app, pick a vibe, get replies.</div>
 
       <div className="section-label">1. Upload screenshot</div>
       <div className="upload-zone">
@@ -155,7 +163,7 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
           <>
             <div className="upload-icon">⬆️</div>
             <div className="upload-title">Click to upload or drag and drop</div>
-            <div className="upload-hint">PNG, JPG up to 10MB</div>
+            <div className="upload-hint">PNG, JPG up to 10MB — WhatsApp, iMessage, IG, any app</div>
           </>
         )}
         <label className="upload-label">
@@ -208,4 +216,4 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
       )}
     </div>
   )
-      }
+        }

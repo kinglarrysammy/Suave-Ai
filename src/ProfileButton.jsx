@@ -7,6 +7,10 @@ export default function ProfileButton({ session }) {
   const [loading, setLoading] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
+  const joinDate = session?.user?.created_at
+    ? new Date(session.user.created_at).toLocaleDateString()
+    : 'Unknown'
+
   const handleChangePassword = async () => {
     setLoading(true)
     const { error } = await supabase.auth.resetPasswordForEmail(session.user.email, {
@@ -43,7 +47,13 @@ export default function ProfileButton({ session }) {
         <div className="feedback-overlay" onClick={() => setOpen(false)}>
           <div className="feedback-card" onClick={(e) => e.stopPropagation()}>
             <div className="section-label">Account</div>
-            <p className="subtext">{session.user.email}</p>
+
+            <div className="card" style={{ marginBottom: 14 }}>
+              <p className="subtext" style={{ marginBottom: 4 }}>Email</p>
+              <p style={{ marginBottom: 10, fontSize: 14 }}>{session.user.email}</p>
+              <p className="subtext" style={{ marginBottom: 4 }}>Member since</p>
+              <p style={{ marginBottom: 0, fontSize: 14 }}>{joinDate}</p>
+            </div>
 
             <button
               className="btn-secondary"
@@ -73,4 +83,4 @@ export default function ProfileButton({ session }) {
       )}
     </>
   )
-              }
+                                                                 }

@@ -7,8 +7,10 @@ import AIAssistant from './AIAssistant'
 import InstallButton from './InstallButton'
 import FeedbackButton from './FeedbackButton'
 import ProfileButton from './ProfileButton'
+import AdminPanel from './AdminPanel'
 import ResetPassword from './ResetPassword'
 import OnboardingModal from './OnboardingModal'
+import { OWNER_EMAIL } from './usageLimiter'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -65,6 +67,7 @@ export default function App() {
   }
 
   const isChatTab = activeTab === 'coach' || activeTab === 'assistant'
+  const isOwner = session?.user?.email === OWNER_EMAIL
 
   if (isRecovery) {
     return <ResetPassword />
@@ -78,6 +81,7 @@ export default function App() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <div className="brand" style={{ marginBottom: 0, fontSize: 22 }}>Suave</div>
             <div style={{ display: 'flex', gap: 8 }}>
+              {isOwner && <AdminPanel />}
               <ProfileButton session={session} />
               <FeedbackButton session={session} />
               <button className="btn-secondary" onClick={handleLogout}>Log out</button>
@@ -157,4 +161,4 @@ export default function App() {
       </div>
     </div>
   )
-}
+    }

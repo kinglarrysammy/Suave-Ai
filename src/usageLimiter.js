@@ -1,6 +1,6 @@
 import { supabase } from './supabaseClient'
 
-const OWNER_EMAIL = 'samoladimeji098@gmail.com'
+export const OWNER_EMAIL = 'samoladimeji098@gmail.com'
 const DAILY_LIMIT = 20
 
 export async function consumeUsage(session) {
@@ -32,4 +32,4 @@ export async function consumeUsage(session) {
     .eq('id', existing.id)
 
   return { allowed: true }
-    }
+}

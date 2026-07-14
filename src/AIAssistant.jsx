@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { useSpeechToText } from './useSpeechToText'
 import { getLatestConversation, listConversations, getConversation, saveConversation, deleteConversation } from './conversationStore'
 import { consumeUsage } from './usageLimiter'
 import ImageCreate from './ImageCreate'
 
 const SYSTEM_PROMPT =
-  'You are a helpful, knowledgeable general-purpose assistant. Answer questions on any topic clearly and accurately. If the user sends an image, look at it carefully and answer based on what you actually see in it. Keep responses concise unless the user asks for detail.'
+  'You are a helpful, knowledgeable general-purpose assistant. Answer questions on any topic clearly and accurately. If the user sends an image, look at it carefully and answer based on what you actually see in it. Format your responses clearly using markdown: short paragraphs, line breaks between ideas, and bullet points or numbered lists when helpful. Do not write everything as one dense block of text. Keep responses concise unless the user asks for detail.'
 
 export default function AIAssistant({ session }) {
   const [view, setView] = useState('chat')
@@ -14,8 +15,8 @@ export default function AIAssistant({ session }) {
   const [history, setHistory] = useState([])
   const [showHistory, setShowHistory] = useState(false)
   const [input, setInput] = useState('')
-  const [image, setImage] = useState(null)
-  const [imagePreview, setImagePreview] = useState(null)
+  const [images, setImages] = useState([])
+  const [imagePreviews, setImagePreviews] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const scrollRef = useRef(null)
@@ -57,8 +58,8 @@ export default function AIAssistant({ session }) {
   const startNewChat = () => {
     setMessages([])
     setConversationId(null)
-    setImage(null)
-    setImagePreview(null)
+    setImages([])
+    setImagePreviews([])
     setShowHistory(false)
   }
 
@@ -99,11 +100,25 @@ export default function AIAssistant({ session }) {
     })
   }
 
-  const handleImageSelect = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setImage(file)
-    setImagePreview(URL.createObjectURL(file))
+  const addFiles = (fileList) => {
+    const files = Array.from(fileList)
+    setImages((prev) => [...prev, ...files])
+    setImagePreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))])
+  }
+
+  const handleGallerySelect = (e) => {
+    if (e.target.files?.length) addFiles(e.target.files)
+    e.target.value = ''
+  }
+
+  const handleCameraCapture = (e) => {
+    if (e.target.files?.length) addFiles(e.target.files)
+    e.target.value = ''
+  }
+
+  const removeImage = (index) => {
+    setImages((prev) => prev.filter((_, i) => i !== index))
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
   const toBase64 = (file) =>
@@ -115,7 +130,7 @@ export default function AIAssistant({ session }) {
     })
 
   const sendMessage = async () => {
-    if ((!input.trim() && !image) || loading) return
+    if ((!input.trim() && images.length === 0) || loading) return
 
     const usage = await consumeUsage(session)
     if (!usage.allowed) {
@@ -130,20 +145,23 @@ export default function AIAssistant({ session }) {
     let apiContent = userContent
 
     try {
-      if (image) {
-        const base64Image = await toBase64(image)
+      if (images.length > 0) {
+        const base64Images = await Promise.all(images.map(toBase64))
         apiContent = [
           { type: 'text', text: userContent },
-          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+          ...base64Images.map((b64) => ({
+            type: 'image_url',
+            image_url: { url: `data:image/jpeg;base64,${b64}` },
+          })),
         ]
       }
 
       const userMessage = { role: 'user', content: userContent }
       const newMessages = [...messages, userMessage]
-      setMessages(newMessages)
+      setMessages([...newMessages, { role: 'assistant', content: '' }])
       setInput('')
-      setImage(null)
-      setImagePreview(null)
+      setImages([])
+      setImagePreviews([])
 
       const apiMessages = [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -161,13 +179,47 @@ export default function AIAssistant({ session }) {
           model: 'meta-llama/llama-4-scout-17b-16e-instruct',
           messages: apiMessages,
           max_tokens: 700,
+          stream: true,
         }),
       })
 
-      const data = await response.json()
-      const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not respond.'
-      const finalMessages = [...newMessages, { role: 'assistant', content: reply }]
-      setMessages(finalMessages)
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let fullText = ''
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop()
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed.startsWith('data:')) continue
+          const payload = trimmed.slice(5).trim()
+          if (payload === '[DONE]') continue
+
+          try {
+            const json = JSON.parse(payload)
+            const delta = json.choices?.[0]?.delta?.content
+            if (delta) {
+              fullText += delta
+              setMessages((prev) => {
+                const updated = [...prev]
+                updated[updated.length - 1] = { role: 'assistant', content: fullText }
+                return updated
+              })
+            }
+          } catch {
+            // skip malformed chunk
+          }
+        }
+      }
+
+      const finalMessages = [...newMessages, { role: 'assistant', content: fullText || 'Sorry, I could not respond.' }]
       persist(finalMessages)
     } catch (err) {
       setError('Failed to get a response. Try again.')
@@ -206,7 +258,7 @@ export default function AIAssistant({ session }) {
       {view === 'chat' && (
         <>
           <div className="brand">✨ AI Assistant</div>
-          <div className="subtext">Ask anything, or send an image and ask about it.</div>
+          <div className="subtext">Ask anything, or send images and ask about them.</div>
 
           <div className="chat-toolbar">
             <button className="btn-secondary" onClick={startNewChat}>+ New Chat</button>
@@ -231,39 +283,39 @@ export default function AIAssistant({ session }) {
             {messages.length === 0 && (
               <div className="chat-empty">
                 <span className="chat-empty-icon">✨</span>
-                Ask me anything, or attach a photo and ask a question about it.
+                Ask me anything, or attach photos and ask a question about them.
               </div>
             )}
             {messages.map((m, i) => (
               <div key={i} className={`chat-bubble ${m.role}`}>
-                {m.content}
+                {m.role === 'assistant' ? <ReactMarkdown>{m.content || ' '}</ReactMarkdown> : m.content}
               </div>
             ))}
-            {loading && <div className="chat-typing">Typing...</div>}
             <div ref={scrollRef} />
           </div>
 
           {error && <p className="error-text">{error}</p>}
           {micError && <p className="error-text">{micError}</p>}
 
-          {imagePreview && (
-            <div className="attach-preview">
-              <img src={imagePreview} alt="attached" />
-              <span>Image attached</span>
-              <button
-                className="btn-secondary"
-                style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 11 }}
-                onClick={() => { setImage(null); setImagePreview(null) }}
-              >
-                Remove
-              </button>
+          {imagePreviews.length > 0 && (
+            <div className="attach-preview-list">
+              {imagePreviews.map((src, i) => (
+                <div key={i} className="attach-thumb">
+                  <img src={src} alt={`attached ${i}`} />
+                  <button onClick={() => removeImage(i)}>✕</button>
+                </div>
+              ))}
             </div>
           )}
 
           <div className="chat-input-row">
             <label className="attach-btn">
               📎
-              <input type="file" accept="image/*" onChange={handleImageSelect} />
+              <input type="file" accept="image/*" multiple onChange={handleGallerySelect} />
+            </label>
+            <label className="attach-btn">
+              📷
+              <input type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} />
             </label>
             <button
               className={`mic-btn ${isListening ? 'listening' : ''}`}
@@ -284,7 +336,7 @@ export default function AIAssistant({ session }) {
             <button
               className="chat-send-btn"
               onClick={sendMessage}
-              disabled={(!input.trim() && !image) || loading}
+              disabled={(!input.trim() && images.length === 0) || loading}
             >
               ➤
             </button>
@@ -293,4 +345,4 @@ export default function AIAssistant({ session }) {
       )}
     </div>
   )
-        }
+                                         }

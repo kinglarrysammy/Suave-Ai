@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { useSpeechToText } from './useSpeechToText'
 import { supabase } from './supabaseClient'
 import { getLatestConversation, listConversations, getConversation, saveConversation, deleteConversation } from './conversationStore'
@@ -8,6 +9,8 @@ const SYSTEM_PROMPT = `You are a supportive, insightful dating coach. Your job i
 
 Important: Do not immediately generate lines or advice on the first message if the situation is unclear. First ask 1-3 short clarifying questions to understand: who the person is (how they know them, what platform), what the user's goal is (start a conversation, ask them out, keep it going), and what vibe they want (playful, sincere, confident). Once you have enough context, give clear, practical advice and, if relevant, 2-3 example messages the user could send.
 
+Format your responses clearly using markdown: use short paragraphs, line breaks between ideas, and bullet points or numbered lists when giving multiple options or steps. Do not write everything as one dense block of text.
+
 Keep every response concise and conversational. Stay strictly focused on dating and relationships — do not answer unrelated general knowledge questions.`
 
 export default function DatingCoach({ session }) {
@@ -16,8 +19,8 @@ export default function DatingCoach({ session }) {
   const [history, setHistory] = useState([])
   const [showHistory, setShowHistory] = useState(false)
   const [input, setInput] = useState('')
-  const [image, setImage] = useState(null)
-  const [imagePreview, setImagePreview] = useState(null)
+  const [images, setImages] = useState([])
+  const [imagePreviews, setImagePreviews] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [savedIndices, setSavedIndices] = useState([])
@@ -60,8 +63,8 @@ export default function DatingCoach({ session }) {
   const startNewChat = () => {
     setMessages([])
     setConversationId(null)
-    setImage(null)
-    setImagePreview(null)
+    setImages([])
+    setImagePreviews([])
     setShowHistory(false)
   }
 
@@ -102,11 +105,25 @@ export default function DatingCoach({ session }) {
     })
   }
 
-  const handleImageSelect = (e) => {
-    const file = e.target.files[0]
-    if (!file) return
-    setImage(file)
-    setImagePreview(URL.createObjectURL(file))
+  const addFiles = (fileList) => {
+    const files = Array.from(fileList)
+    setImages((prev) => [...prev, ...files])
+    setImagePreviews((prev) => [...prev, ...files.map((f) => URL.createObjectURL(f))])
+  }
+
+  const handleGallerySelect = (e) => {
+    if (e.target.files?.length) addFiles(e.target.files)
+    e.target.value = ''
+  }
+
+  const handleCameraCapture = (e) => {
+    if (e.target.files?.length) addFiles(e.target.files)
+    e.target.value = ''
+  }
+
+  const removeImage = (index) => {
+    setImages((prev) => prev.filter((_, i) => i !== index))
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
   const toBase64 = (file) =>
@@ -118,7 +135,7 @@ export default function DatingCoach({ session }) {
     })
 
   const sendMessage = async () => {
-    if ((!input.trim() && !image) || loading) return
+    if ((!input.trim() && images.length === 0) || loading) return
 
     const usage = await consumeUsage(session)
     if (!usage.allowed) {
@@ -129,24 +146,27 @@ export default function DatingCoach({ session }) {
     setLoading(true)
     setError('')
 
-    let userContent = input.trim() || 'Take a look at this.'
+    const userContent = input.trim() || 'Take a look at this.'
     let apiContent = userContent
 
     try {
-      if (image) {
-        const base64Image = await toBase64(image)
+      if (images.length > 0) {
+        const base64Images = await Promise.all(images.map(toBase64))
         apiContent = [
           { type: 'text', text: userContent },
-          { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+          ...base64Images.map((b64) => ({
+            type: 'image_url',
+            image_url: { url: `data:image/jpeg;base64,${b64}` },
+          })),
         ]
       }
 
       const userMessage = { role: 'user', content: userContent }
       const newMessages = [...messages, userMessage]
-      setMessages(newMessages)
+      setMessages([...newMessages, { role: 'assistant', content: '' }])
       setInput('')
-      setImage(null)
-      setImagePreview(null)
+      setImages([])
+      setImagePreviews([])
 
       const apiMessages = [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -164,13 +184,47 @@ export default function DatingCoach({ session }) {
           model: 'meta-llama/llama-4-scout-17b-16e-instruct',
           messages: apiMessages,
           max_tokens: 700,
+          stream: true,
         }),
       })
 
-      const data = await response.json()
-      const reply = data.choices?.[0]?.message?.content || 'Sorry, I could not respond.'
-      const finalMessages = [...newMessages, { role: 'assistant', content: reply }]
-      setMessages(finalMessages)
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let fullText = ''
+      let buffer = ''
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop()
+
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed.startsWith('data:')) continue
+          const payload = trimmed.slice(5).trim()
+          if (payload === '[DONE]') continue
+
+          try {
+            const json = JSON.parse(payload)
+            const delta = json.choices?.[0]?.delta?.content
+            if (delta) {
+              fullText += delta
+              setMessages((prev) => {
+                const updated = [...prev]
+                updated[updated.length - 1] = { role: 'assistant', content: fullText }
+                return updated
+              })
+            }
+          } catch {
+            // skip malformed chunk
+          }
+        }
+      }
+
+      const finalMessages = [...newMessages, { role: 'assistant', content: fullText || 'Sorry, I could not respond.' }]
       persist(finalMessages)
     } catch (err) {
       setError('Failed to get a response. Try again.')
@@ -232,8 +286,10 @@ export default function DatingCoach({ session }) {
         )}
         {messages.map((m, i) => (
           <div key={i}>
-            <div className={`chat-bubble ${m.role}`}>{m.content}</div>
-            {m.role === 'assistant' && (
+            <div className={`chat-bubble ${m.role}`}>
+              {m.role === 'assistant' ? <ReactMarkdown>{m.content || ' '}</ReactMarkdown> : m.content}
+            </div>
+            {m.role === 'assistant' && m.content && (
               <button
                 className={`save-btn ${savedIndices.includes(i) ? 'saved' : ''}`}
                 onClick={() => saveMessage(i, m.content)}
@@ -244,31 +300,31 @@ export default function DatingCoach({ session }) {
             )}
           </div>
         ))}
-        {loading && <div className="chat-typing">Typing...</div>}
         <div ref={scrollRef} />
       </div>
 
       {error && <p className="error-text">{error}</p>}
       {micError && <p className="error-text">{micError}</p>}
 
-      {imagePreview && (
-        <div className="attach-preview">
-          <img src={imagePreview} alt="attached" />
-          <span>Image attached</span>
-          <button
-            className="btn-secondary"
-            style={{ marginLeft: 'auto', padding: '4px 10px', fontSize: 11 }}
-            onClick={() => { setImage(null); setImagePreview(null) }}
-          >
-            Remove
-          </button>
+      {imagePreviews.length > 0 && (
+        <div className="attach-preview-list">
+          {imagePreviews.map((src, i) => (
+            <div key={i} className="attach-thumb">
+              <img src={src} alt={`attached ${i}`} />
+              <button onClick={() => removeImage(i)}>✕</button>
+            </div>
+          ))}
         </div>
       )}
 
       <div className="chat-input-row">
         <label className="attach-btn">
           📎
-          <input type="file" accept="image/*" onChange={handleImageSelect} />
+          <input type="file" accept="image/*" multiple onChange={handleGallerySelect} />
+        </label>
+        <label className="attach-btn">
+          📷
+          <input type="file" accept="image/*" capture="environment" onChange={handleCameraCapture} />
         </label>
         <button
           className={`mic-btn ${isListening ? 'listening' : ''}`}
@@ -289,11 +345,11 @@ export default function DatingCoach({ session }) {
         <button
           className="chat-send-btn"
           onClick={sendMessage}
-          disabled={(!input.trim() && !image) || loading}
+          disabled={(!input.trim() && images.length === 0) || loading}
         >
           ➤
         </button>
       </div>
     </div>
   )
-                        }
+        }

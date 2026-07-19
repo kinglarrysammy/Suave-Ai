@@ -1,7 +1,8 @@
 {
-  "{
+  "id": "/",
   "name": "Suave",
   "short_name": "Suave",
+  "description": "Suave is an AI-powered dating and conversation assistant that helps you craft the perfect reply, get coaching on dating situations, and generate images.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#16130f",

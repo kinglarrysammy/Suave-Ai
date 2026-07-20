@@ -1,16 +1,17 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #16130f;
-  --surface: #211d17;
-  --surface-hover: #2a251d;
-  --border: #3a332688;
-  --gold: #d4a94a;
-  --gold-light: #e8c874;
-  --gold-soft: #d4a94a22;
-  --text: #f3ede1;
-  --text-dim: #a89f8c;
-  --danger: #e0574f;
+  --bg: #f8f4ee;
+  --surface: #ffffff;
+  --surface-hover: #f1ece3;
+  --border: #e3dccf;
+  --gold: #de6b45;
+  --gold-light: #ec8f6c;
+  --gold-dark: #b8502f;
+  --gold-soft: #de6b451a;
+  --text: #2c2116;
+  --text-dim: #9c8f7d;
+  --danger: #d64545;
 }
 
 body {
@@ -38,7 +39,7 @@ button:disabled {
 
 .btn-primary {
   background: var(--gold);
-  color: #16130f;
+  color: #fff;
 }
 .btn-primary:hover:not(:disabled) { opacity: 0.9; }
 
@@ -51,7 +52,7 @@ button:disabled {
 
 .btn-gradient {
   background: linear-gradient(135deg, var(--gold-light), var(--gold));
-  color: #16130f;
+  color: #fff;
   width: 100%;
   padding: 16px;
   font-size: 16px;
@@ -117,7 +118,7 @@ input::placeholder, textarea::placeholder {
   font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.5px;
-  color: var(--gold);
+  color: var(--gold-dark);
   margin-bottom: 4px;
 }
 
@@ -143,6 +144,7 @@ input::placeholder, textarea::placeholder {
   margin-bottom: 16px;
   border: 1px solid var(--border);
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(43,33,22,0.06);
 }
 
 .navbar button {
@@ -164,7 +166,7 @@ input::placeholder, textarea::placeholder {
 
 .navbar button.active {
   background: linear-gradient(135deg, var(--gold-light), var(--gold));
-  color: #16130f;
+  color: #fff;
 }
 
 .card {
@@ -173,6 +175,7 @@ input::placeholder, textarea::placeholder {
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 16px;
+  box-shadow: 0 1px 4px rgba(43,33,22,0.06);
 }
 
 .upload-zone {
@@ -183,6 +186,7 @@ input::placeholder, textarea::placeholder {
   color: var(--text-dim);
   margin-bottom: 24px;
   cursor: pointer;
+  background: var(--surface);
 }
 
 .upload-zone .upload-icon {
@@ -216,7 +220,7 @@ input::placeholder, textarea::placeholder {
 .upload-label {
   display: inline-block;
   background: var(--gold);
-  color: #16130f;
+  color: #fff;
   padding: 12px 24px;
   border-radius: 10px;
   font-size: 14px;
@@ -250,6 +254,7 @@ input::placeholder, textarea::placeholder {
   color: var(--text-dim);
   font-size: 14px;
   font-weight: 600;
+  box-shadow: 0 1px 3px rgba(43,33,22,0.05);
 }
 
 .tone-card .tone-emoji {
@@ -260,7 +265,7 @@ input::placeholder, textarea::placeholder {
 
 .tone-card.selected {
   border-color: var(--gold);
-  color: var(--gold);
+  color: var(--gold-dark);
   background: var(--gold-soft);
 }
 
@@ -272,6 +277,7 @@ input::placeholder, textarea::placeholder {
   margin-bottom: 12px;
   font-size: 14px;
   line-height: 1.5;
+  box-shadow: 0 1px 4px rgba(43,33,22,0.06);
 }
 
 .reply-card-actions {
@@ -321,6 +327,7 @@ input::placeholder, textarea::placeholder {
   max-height: 160px;
   overflow-y: auto;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(43,33,22,0.06);
 }
 
 .history-item {
@@ -370,6 +377,7 @@ input::placeholder, textarea::placeholder {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  box-shadow: 0 1px 4px rgba(43,33,22,0.06);
 }
 
 .chat-empty {
@@ -399,7 +407,7 @@ input::placeholder, textarea::placeholder {
 .chat-bubble.user {
   align-self: flex-end;
   background: var(--gold-soft);
-  color: var(--gold-light);
+  color: var(--gold-dark);
   border-color: var(--gold);
   border-bottom-right-radius: 4px;
 }
@@ -424,10 +432,10 @@ input::placeholder, textarea::placeholder {
   margin-bottom: 4px;
 }
 .chat-bubble strong {
-  color: var(--gold-light);
+  color: var(--gold-dark);
 }
 .chat-bubble.user strong {
-  color: var(--gold);
+  color: var(--gold-dark);
 }
 
 .chat-typing {
@@ -447,6 +455,7 @@ input::placeholder, textarea::placeholder {
   border-radius: 20px;
   padding: 6px 6px 6px 14px;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(43,33,22,0.06);
 }
 
 .chat-input-row textarea {
@@ -471,7 +480,7 @@ input::placeholder, textarea::placeholder {
 
 .chat-send-btn {
   background: linear-gradient(135deg, var(--gold-light), var(--gold));
-  color: #16130f;
+  color: #fff;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -506,9 +515,9 @@ input::placeholder, textarea::placeholder {
 }
 
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(224, 87, 79, 0.5); }
-  70% { box-shadow: 0 0 0 10px rgba(224, 87, 79, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(224, 87, 79, 0); }
+  0% { box-shadow: 0 0 0 0 rgba(214, 69, 69, 0.5); }
+  70% { box-shadow: 0 0 0 10px rgba(214, 69, 69, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(214, 69, 69, 0); }
 }
 
 .attach-btn {
@@ -578,7 +587,7 @@ input::placeholder, textarea::placeholder {
 }
 
 .save-btn.saved {
-  color: var(--gold);
+  color: var(--gold-dark);
   border-color: var(--gold);
 }
 
@@ -593,7 +602,7 @@ input::placeholder, textarea::placeholder {
 }
 
 .copy-btn.copied {
-  color: var(--gold);
+  color: var(--gold-dark);
   border-color: var(--gold);
 }
 
@@ -637,7 +646,7 @@ input::placeholder, textarea::placeholder {
 .feedback-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.5);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -651,4 +660,5 @@ input::placeholder, textarea::placeholder {
   padding: 20px;
   width: 100%;
   max-width: 520px;
+  box-shadow: 0 -2px 12px rgba(43,33,22,0.1);
   }

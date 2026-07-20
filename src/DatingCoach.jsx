@@ -188,6 +188,11 @@ export default function DatingCoach({ session }) {
         }),
       })
 
+      if (!response.ok) {
+        const errBody = await response.text()
+        throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
+      }
+
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let fullText = ''
@@ -224,10 +229,21 @@ export default function DatingCoach({ session }) {
         }
       }
 
-      const finalMessages = [...newMessages, { role: 'assistant', content: fullText || 'Sorry, I could not respond.' }]
+      if (!fullText) {
+        throw new Error('No response received from the AI. The API key may be invalid or the service may be down.')
+      }
+
+      const finalMessages = [...newMessages, { role: 'assistant', content: fullText }]
       persist(finalMessages)
     } catch (err) {
-      setError('Failed to get a response. Try again.')
+      setError(err.message || 'Failed to get a response. Try again.')
+      setMessages((prev) => {
+        const updated = [...prev]
+        if (updated[updated.length - 1]?.role === 'assistant' && !updated[updated.length - 1]?.content) {
+          updated.pop()
+        }
+        return updated
+      })
       console.error(err)
     } finally {
       setLoading(false)
@@ -352,4 +368,4 @@ export default function DatingCoach({ session }) {
       </div>
     </div>
   )
-        }
+  }

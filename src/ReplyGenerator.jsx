@@ -9,15 +9,25 @@ const TONES = [
   { key: 'casual', emoji: '💬', label: 'Casual' },
 ]
 
+const spiceDescriptor = (level) => {
+  if (level <= 20) return 'very mild, sweet, and wholesome — nothing forward at all'
+  if (level <= 40) return 'warm and lightly playful, still pretty safe'
+  if (level <= 60) return 'flirty and teasing, clearly interested'
+  if (level <= 80) return 'bold and spicy, confident and a little provocative'
+  return 'very spicy and daring, bold and cheeky — but always tasteful, never explicit or crude'
+}
+
 export default function ReplyGenerator({ session }) {
   const [image, setImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
   const [tone, setTone] = useState('flirty')
+  const [spice, setSpice] = useState(50)
   const [replies, setReplies] = useState([])
   const [loading, setLoading] = useState(false)
   const [loadingStep, setLoadingStep] = useState('')
   const [error, setError] = useState('')
   const [savedIndices, setSavedIndices] = useState([])
+  const [copiedIndices, setCopiedIndices] = useState([])
 
   const handleImageChange = (e) => {
     const file = e.target.files[0]
@@ -26,6 +36,7 @@ export default function ReplyGenerator({ session }) {
     setImagePreview(URL.createObjectURL(file))
     setReplies([])
     setSavedIndices([])
+    setCopiedIndices([])
     setError('')
   }
 
@@ -54,6 +65,44 @@ export default function ReplyGenerator({ session }) {
     return data.choices?.[0]?.message?.content || ''
   }
 
+  const getTranscript = async (base64Image, attempt) => {
+    const strictness = attempt === 1
+      ? ''
+      : ' If the screenshot contains forwarded content, status updates, or embedded images, focus only on the actual typed chat messages (text bubbles), and ignore forwarded media previews or status content when identifying LEFT/RIGHT messages.'
+
+    const transcriptRaw = await callGroq([
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: `Transcribe this chat screenshot. This could be from any messaging app (WhatsApp, iMessage, Instagram DM, Messenger, Telegram, Snapchat, Tinder, SMS, or any other). List every real chat message bubble you can see, in top-to-bottom order.
+For each one, output a line in this exact format:
+LEFT: <message text>
+or
+RIGHT: <message text>
+
+Determine LEFT vs RIGHT purely by which side of the screen the bubble is positioned on — ignore bubble color, since different apps use different color schemes.${strictness} Do not add commentary, do not summarize. Just the labeled list.`,
+          },
+          {
+            type: 'image_url',
+            image_url: { url: `data:image/jpeg;base64,${base64Image}` },
+          },
+        ],
+      },
+    ], 600)
+
+    const lines = transcriptRaw
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.startsWith('LEFT:') || l.startsWith('RIGHT:'))
+
+    const lastLeftLine = [...lines].reverse().find((l) => l.startsWith('LEFT:'))
+    const herLastMessage = lastLeftLine ? lastLeftLine.replace('LEFT:', '').trim() : null
+
+    return { lines, herLastMessage }
+  }
+
   const generateReplies = async () => {
     if (!image) return
 
@@ -66,49 +115,23 @@ export default function ReplyGenerator({ session }) {
     setLoading(true)
     setError('')
     setReplies([])
+    setCopiedIndices([])
 
     try {
       const base64Image = await toBase64(image)
 
       setLoadingStep('Reading the conversation...')
-      const transcriptRaw = await callGroq([
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: `Transcribe this chat screenshot. This could be from any messaging app (WhatsApp, iMessage, Instagram DM, Messenger, Telegram, Snapchat, Tinder, SMS, or any other). List every message bubble you can see, in top-to-bottom order.
-For each one, output a line in this exact format:
-LEFT: <message text>
-or
-RIGHT: <message text>
-
-Determine LEFT vs RIGHT purely by which side of the screen the bubble is positioned on — ignore bubble color, since different apps use different color schemes (WhatsApp green, iMessage blue, Instagram gradient, etc). Do not add commentary, do not summarize, do not skip any message. Just the labeled list.`,
-            },
-            {
-              type: 'image_url',
-              image_url: { url: `data:image/jpeg;base64,${base64Image}` },
-            },
-          ],
-        },
-      ], 600)
-
-      if (!transcriptRaw.trim()) {
-        throw new Error('Could not read the conversation from the image.')
-      }
-
-      const lines = transcriptRaw
-        .split('\n')
-        .map((l) => l.trim())
-        .filter((l) => l.startsWith('LEFT:') || l.startsWith('RIGHT:'))
-
-      const lastLeftLine = [...lines].reverse().find((l) => l.startsWith('LEFT:'))
-      const herLastMessage = lastLeftLine
-        ? lastLeftLine.replace('LEFT:', '').trim()
-        : null
+      let { lines, herLastMessage } = await getTranscript(base64Image, 1)
 
       if (!herLastMessage) {
-        throw new Error('Could not identify the other person\'s message. Try a clearer screenshot.')
+        setLoadingStep('Having another look...')
+        const retry = await getTranscript(base64Image, 2)
+        lines = retry.lines
+        herLastMessage = retry.herLastMessage
+      }
+
+      if (!herLastMessage) {
+        throw new Error('Could not read this conversation clearly. Works best with a normal back-and-forth chat screenshot — try cropping out forwarded status updates or media previews.')
       }
 
       setLoadingStep('Writing replies...')
@@ -122,11 +145,11 @@ The other person's most recent message is: "${herLastMessage}"
 
 Write 3 different reply options, in a ${tone} tone, that directly and naturally respond to that message, fitting the flow of the conversation.
 
+Intensity level for these replies: ${spiceDescriptor(spice)}.
+
 Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
-          },
-        ],
-        500,
-      )
+        },
+      ], 500)
 
       const clean = replyRaw.replace(/```json|```/g, '').trim()
       const parsed = JSON.parse(clean)
@@ -150,6 +173,20 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
     if (!error) setSavedIndices((prev) => [...prev, index])
   }
 
+  const copyReply = async (index, content) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedIndices((prev) => [...prev, index])
+      setTimeout(() => {
+        setCopiedIndices((prev) => prev.filter((i) => i !== index))
+      }, 2000)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const spiceLabel = spice <= 20 ? 'Mild' : spice <= 40 ? 'Warm' : spice <= 60 ? 'Flirty' : spice <= 80 ? 'Bold' : 'Spicy 🌶️'
+
   return (
     <div>
       <div className="brand">Reply Generator</div>
@@ -163,7 +200,7 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
           <>
             <div className="upload-icon">⬆️</div>
             <div className="upload-title">Click to upload or drag and drop</div>
-            <div className="upload-hint">PNG, JPG up to 10MB — WhatsApp, iMessage, IG, any app</div>
+            <div className="upload-hint">Works best with a normal back-and-forth chat — not status updates or forwards</div>
           </>
         )}
         <label className="upload-label">
@@ -186,6 +223,20 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
         ))}
       </div>
 
+      <div className="section-label">3. Adjust the spice level — {spiceLabel}</div>
+      <input
+        type="range"
+        min="0"
+        max="100"
+        value={spice}
+        onChange={(e) => setSpice(Number(e.target.value))}
+        className="spice-slider"
+      />
+      <div className="spice-labels">
+        <span>Sweet</span>
+        <span>Spicy 🌶️</span>
+      </div>
+
       <button
         className="btn-gradient"
         onClick={generateReplies}
@@ -201,7 +252,13 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
           {replies.map((reply, i) => (
             <div key={i} className="reply-card">
               {reply}
-              <div>
+              <div className="reply-card-actions">
+                <button
+                  className={`copy-btn ${copiedIndices.includes(i) ? 'copied' : ''}`}
+                  onClick={() => copyReply(i, reply)}
+                >
+                  {copiedIndices.includes(i) ? '✓ Copied' : '📋 Copy'}
+                </button>
                 <button
                   className={`save-btn ${savedIndices.includes(i) ? 'saved' : ''}`}
                   onClick={() => saveReply(i, reply)}
@@ -216,4 +273,4 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
       )}
     </div>
   )
-        }
+      }

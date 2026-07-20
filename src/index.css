@@ -274,6 +274,12 @@ input::placeholder, textarea::placeholder {
   line-height: 1.5;
 }
 
+.reply-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
 .error-text {
   color: var(--danger);
   font-size: 13px;
@@ -574,6 +580,58 @@ input::placeholder, textarea::placeholder {
 .save-btn.saved {
   color: var(--gold);
   border-color: var(--gold);
+}
+
+.copy-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  margin-top: 6px;
+}
+
+.copy-btn.copied {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+.spice-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #7ec8e3, var(--gold), var(--danger));
+  margin: 10px 0 4px;
+}
+
+.spice-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--gold);
+  cursor: pointer;
+}
+
+.spice-slider::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--gold);
+  cursor: pointer;
+}
+
+.spice-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 18px;
 }
 
 .feedback-overlay {

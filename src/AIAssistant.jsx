@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown'
 import { useSpeechToText } from './useSpeechToText'
 import { getLatestConversation, listConversations, getConversation, saveConversation, deleteConversation } from './conversationStore'
 import { consumeUsage } from './usageLimiter'
+import { stripThinking } from './aiUtils'
 import ImageCreate from './ImageCreate'
 
 const SYSTEM_PROMPT =
@@ -178,7 +179,7 @@ export default function AIAssistant({ session }) {
         body: JSON.stringify({
           model: 'qwen/qwen3.6-27b',
           messages: apiMessages,
-          max_tokens: 900,
+          max_tokens: 1200,
           stream: true,
         }),
       })
@@ -190,7 +191,7 @@ export default function AIAssistant({ session }) {
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
-      let fullText = ''
+      let rawText = ''
       let buffer = ''
 
       while (true) {
@@ -211,10 +212,11 @@ export default function AIAssistant({ session }) {
             const json = JSON.parse(payload)
             const delta = json.choices?.[0]?.delta?.content
             if (delta) {
-              fullText += delta
+              rawText += delta
+              const visible = stripThinking(rawText)
               setMessages((prev) => {
                 const updated = [...prev]
-                updated[updated.length - 1] = { role: 'assistant', content: fullText }
+                updated[updated.length - 1] = { role: 'assistant', content: visible }
                 return updated
               })
             }
@@ -224,11 +226,14 @@ export default function AIAssistant({ session }) {
         }
       }
 
-      if (!fullText) {
+      const finalText = stripThinking(rawText)
+
+      if (!finalText) {
         throw new Error('No response received from the AI. Try again in a moment.')
       }
 
-      const finalMessages = [...newMessages, { role: 'assistant', content: fullText }]
+      const finalMessages = [...newMessages, { role: 'assistant', content: finalText }]
+      setMessages(finalMessages)
       persist(finalMessages)
     } catch (err) {
       setError(err.message || 'Failed to get a response. Try again.')
@@ -361,4 +366,4 @@ export default function AIAssistant({ session }) {
       )}
     </div>
   )
-                          }
+            }

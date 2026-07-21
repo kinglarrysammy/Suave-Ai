@@ -181,9 +181,9 @@ export default function DatingCoach({ session }) {
           Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model: 'qwen/qwen3.6-27b',
           messages: apiMessages,
-          max_tokens: 700,
+          max_tokens: 900,
           stream: true,
         }),
       })
@@ -230,7 +230,7 @@ export default function DatingCoach({ session }) {
       }
 
       if (!fullText) {
-        throw new Error('No response received from the AI. The API key may be invalid or the service may be down.')
+        throw new Error('No response received from the AI. Try again in a moment.')
       }
 
       const finalMessages = [...newMessages, { role: 'assistant', content: fullText }]
@@ -368,4 +368,4 @@ export default function DatingCoach({ session }) {
       </div>
     </div>
   )
-  }
+                                    }

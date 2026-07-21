@@ -4,6 +4,7 @@ import { useSpeechToText } from './useSpeechToText'
 import { supabase } from './supabaseClient'
 import { getLatestConversation, listConversations, getConversation, saveConversation, deleteConversation } from './conversationStore'
 import { consumeUsage } from './usageLimiter'
+import { stripThinking } from './aiUtils'
 
 const SYSTEM_PROMPT = `You are a supportive, insightful dating coach. Your job is to help the user with real dating situations — approaching a crush, texting someone new, DMing someone on social media, keeping a conversation going, or figuring out if someone is interested.
 
@@ -183,7 +184,7 @@ export default function DatingCoach({ session }) {
         body: JSON.stringify({
           model: 'qwen/qwen3.6-27b',
           messages: apiMessages,
-          max_tokens: 900,
+          max_tokens: 1200,
           stream: true,
         }),
       })
@@ -195,7 +196,7 @@ export default function DatingCoach({ session }) {
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
-      let fullText = ''
+      let rawText = ''
       let buffer = ''
 
       while (true) {
@@ -216,10 +217,11 @@ export default function DatingCoach({ session }) {
             const json = JSON.parse(payload)
             const delta = json.choices?.[0]?.delta?.content
             if (delta) {
-              fullText += delta
+              rawText += delta
+              const visible = stripThinking(rawText)
               setMessages((prev) => {
                 const updated = [...prev]
-                updated[updated.length - 1] = { role: 'assistant', content: fullText }
+                updated[updated.length - 1] = { role: 'assistant', content: visible }
                 return updated
               })
             }
@@ -229,11 +231,14 @@ export default function DatingCoach({ session }) {
         }
       }
 
-      if (!fullText) {
+      const finalText = stripThinking(rawText)
+
+      if (!finalText) {
         throw new Error('No response received from the AI. Try again in a moment.')
       }
 
-      const finalMessages = [...newMessages, { role: 'assistant', content: fullText }]
+      const finalMessages = [...newMessages, { role: 'assistant', content: finalText }]
+      setMessages(finalMessages)
       persist(finalMessages)
     } catch (err) {
       setError(err.message || 'Failed to get a response. Try again.')
@@ -368,4 +373,4 @@ export default function DatingCoach({ session }) {
       </div>
     </div>
   )
-                                    }
+                          }

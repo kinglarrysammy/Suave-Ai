@@ -176,12 +176,17 @@ export default function AIAssistant({ session }) {
           Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model: 'qwen/qwen3.6-27b',
           messages: apiMessages,
-          max_tokens: 700,
+          max_tokens: 900,
           stream: true,
         }),
       })
+
+      if (!response.ok) {
+        const errBody = await response.text()
+        throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
+      }
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
@@ -219,10 +224,21 @@ export default function AIAssistant({ session }) {
         }
       }
 
-      const finalMessages = [...newMessages, { role: 'assistant', content: fullText || 'Sorry, I could not respond.' }]
+      if (!fullText) {
+        throw new Error('No response received from the AI. Try again in a moment.')
+      }
+
+      const finalMessages = [...newMessages, { role: 'assistant', content: fullText }]
       persist(finalMessages)
     } catch (err) {
-      setError('Failed to get a response. Try again.')
+      setError(err.message || 'Failed to get a response. Try again.')
+      setMessages((prev) => {
+        const updated = [...prev]
+        if (updated[updated.length - 1]?.role === 'assistant' && !updated[updated.length - 1]?.content) {
+          updated.pop()
+        }
+        return updated
+      })
       console.error(err)
     } finally {
       setLoading(false)
@@ -345,4 +361,4 @@ export default function AIAssistant({ session }) {
       )}
     </div>
   )
-                                         }
+                          }

@@ -59,7 +59,7 @@ export default function ImageCreate({ session }) {
           Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model: 'qwen/qwen3.6-27b',
           messages: [
             {
               role: 'user',
@@ -71,9 +71,14 @@ Desired style: ${STYLE_HINTS[style]}
 Include specifics on: subject and pose, composition and framing, lighting, color palette, and quality boosters appropriate for the style. Output ONLY the final descriptive prompt text, nothing else — no preamble, no quotes, no explanation.`,
             },
           ],
-          max_tokens: 300,
+          max_tokens: 500,
         }),
       })
+
+      if (!response.ok) {
+        const errBody = await response.text()
+        throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
+      }
 
       const data = await response.json()
       const finalPrompt = data.choices?.[0]?.message?.content?.trim() || idea.trim()
@@ -194,4 +199,4 @@ Include specifics on: subject and pose, composition and framing, lighting, color
       )}
     </div>
   )
-}
+          }

@@ -18,6 +18,8 @@ const spiceDescriptor = (level) => {
   return 'very spicy and daring, bold and cheeky — but always tasteful, never explicit or crude'
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
 export default function ReplyGenerator({ session }) {
   const [image, setImage] = useState(null)
   const [imagePreview, setImagePreview] = useState(null)
@@ -49,23 +51,35 @@ export default function ReplyGenerator({ session }) {
       reader.onerror = reject
     })
 
-  const callGroq = async (messages, maxTokens = 900) => {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'qwen/qwen3.6-27b',
-        messages,
-        max_tokens: maxTokens,
-      }),
-    })
+  const callGroq = async (model, messages, maxTokens = 600) => {
+    const attemptCall = async () => {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({ model, messages, max_tokens: maxTokens }),
+      })
+      return response
+    }
+
+    let response = await attemptCall()
+
+    if (response.status === 429) {
+      setLoadingStep('Rate limit hit, waiting a moment...')
+      await sleep(12000)
+      response = await attemptCall()
+    }
+
     if (!response.ok) {
       const errBody = await response.text()
+      if (response.status === 429) {
+        throw new Error('Groq\'s free-tier rate limit was hit. Wait about 15-20 seconds and try again.')
+      }
       throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
     }
+
     const data = await response.json()
     const raw = data.choices?.[0]?.message?.content || ''
     return stripThinking(raw)
@@ -76,7 +90,7 @@ export default function ReplyGenerator({ session }) {
       ? ''
       : ' If the screenshot contains forwarded content, status updates, or embedded images, focus only on the actual typed chat messages (text bubbles), and ignore forwarded media previews or status content when identifying LEFT/RIGHT messages.'
 
-    const transcriptRaw = await callGroq([
+    const transcriptRaw = await callGroq('qwen/qwen3.6-27b', [
       {
         role: 'user',
         content: [
@@ -96,7 +110,7 @@ Determine LEFT vs RIGHT purely by which side of the screen the bubble is positio
           },
         ],
       },
-    ], 900)
+    ], 600)
 
     const lines = transcriptRaw
       .split('\n')
@@ -141,7 +155,7 @@ Determine LEFT vs RIGHT purely by which side of the screen the bubble is positio
       }
 
       setLoadingStep('Writing replies...')
-      const replyRaw = await callGroq([
+      const replyRaw = await callGroq('openai/gpt-oss-120b', [
         {
           role: 'user',
           content: `Here is a chat transcript for context:
@@ -155,7 +169,7 @@ Intensity level for these replies: ${spiceDescriptor(spice)}.
 
 Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, no thinking, just the array.`,
         },
-      ], 700)
+      ], 500)
 
       const clean = replyRaw.replace(/```json|```/g, '').trim()
       const parsed = JSON.parse(clean)
@@ -279,4 +293,4 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, no t
       )}
     </div>
   )
-        }
+            }

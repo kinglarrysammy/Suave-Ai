@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from './supabaseClient'
 import { consumeUsage } from './usageLimiter'
+import { stripThinking } from './aiUtils'
 
 const TONES = [
   { key: 'flirty', emoji: '😏', label: 'Flirty' },
@@ -48,7 +49,7 @@ export default function ReplyGenerator({ session }) {
       reader.onerror = reject
     })
 
-  const callGroq = async (messages, maxTokens = 700) => {
+  const callGroq = async (messages, maxTokens = 900) => {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -66,7 +67,8 @@ export default function ReplyGenerator({ session }) {
       throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
     }
     const data = await response.json()
-    return data.choices?.[0]?.message?.content || ''
+    const raw = data.choices?.[0]?.message?.content || ''
+    return stripThinking(raw)
   }
 
   const getTranscript = async (base64Image, attempt) => {
@@ -151,7 +153,7 @@ Write 3 different reply options, in a ${tone} tone, that directly and naturally 
 
 Intensity level for these replies: ${spiceDescriptor(spice)}.
 
-Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
+Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, no thinking, just the array.`,
         },
       ], 700)
 
@@ -277,4 +279,4 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
       )}
     </div>
   )
-}
+        }

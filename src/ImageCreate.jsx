@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { supabase } from './supabaseClient'
 import { consumeUsage } from './usageLimiter'
+import { stripThinking } from './aiUtils'
 
 const STYLES = [
   { key: 'realistic', emoji: '📷', label: 'Realistic' },
@@ -68,10 +69,10 @@ export default function ImageCreate({ session }) {
 Idea: "${idea.trim()}"
 Desired style: ${STYLE_HINTS[style]}
 
-Include specifics on: subject and pose, composition and framing, lighting, color palette, and quality boosters appropriate for the style. Output ONLY the final descriptive prompt text, nothing else — no preamble, no quotes, no explanation.`,
+Include specifics on: subject and pose, composition and framing, lighting, color palette, and quality boosters appropriate for the style. Output ONLY the final descriptive prompt text, nothing else — no preamble, no quotes, no explanation, no thinking.`,
             },
           ],
-          max_tokens: 500,
+          max_tokens: 600,
         }),
       })
 
@@ -81,7 +82,8 @@ Include specifics on: subject and pose, composition and framing, lighting, color
       }
 
       const data = await response.json()
-      const finalPrompt = data.choices?.[0]?.message?.content?.trim() || idea.trim()
+      const raw = data.choices?.[0]?.message?.content?.trim() || idea.trim()
+      const finalPrompt = stripThinking(raw) || idea.trim()
 
       let attempt = 0
       let success = false
@@ -199,4 +201,4 @@ Include specifics on: subject and pose, composition and framing, lighting, color
       )}
     </div>
   )
-          }
+      }

@@ -48,7 +48,7 @@ export default function ReplyGenerator({ session }) {
       reader.onerror = reject
     })
 
-  const callGroq = async (messages, maxTokens = 500) => {
+  const callGroq = async (messages, maxTokens = 700) => {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -56,11 +56,15 @@ export default function ReplyGenerator({ session }) {
         Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        model: 'qwen/qwen3.6-27b',
         messages,
         max_tokens: maxTokens,
       }),
     })
+    if (!response.ok) {
+      const errBody = await response.text()
+      throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
+    }
     const data = await response.json()
     return data.choices?.[0]?.message?.content || ''
   }
@@ -90,7 +94,7 @@ Determine LEFT vs RIGHT purely by which side of the screen the bubble is positio
           },
         ],
       },
-    ], 600)
+    ], 900)
 
     const lines = transcriptRaw
       .split('\n')
@@ -149,7 +153,7 @@ Intensity level for these replies: ${spiceDescriptor(spice)}.
 
 Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
         },
-      ], 500)
+      ], 700)
 
       const clean = replyRaw.replace(/```json|```/g, '').trim()
       const parsed = JSON.parse(clean)
@@ -273,4 +277,4 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation.`,
       )}
     </div>
   )
-      }
+}

@@ -60,7 +60,7 @@ export default function ImageCreate({ session }) {
           Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'qwen/qwen3.6-27b',
+          model: 'openai/gpt-oss-120b',
           messages: [
             {
               role: 'user',
@@ -72,12 +72,15 @@ Desired style: ${STYLE_HINTS[style]}
 Include specifics on: subject and pose, composition and framing, lighting, color palette, and quality boosters appropriate for the style. Output ONLY the final descriptive prompt text, nothing else — no preamble, no quotes, no explanation, no thinking.`,
             },
           ],
-          max_tokens: 600,
+          max_tokens: 500,
         }),
       })
 
       if (!response.ok) {
         const errBody = await response.text()
+        if (response.status === 429) {
+          throw new Error('Rate limit reached. Wait about 15-20 seconds and try again.')
+        }
         throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
       }
 
@@ -201,4 +204,4 @@ Include specifics on: subject and pose, composition and framing, lighting, color
       )}
     </div>
   )
-      }
+          }

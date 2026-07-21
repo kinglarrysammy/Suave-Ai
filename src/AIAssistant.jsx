@@ -142,11 +142,13 @@ export default function AIAssistant({ session }) {
     setLoading(true)
     setError('')
 
+    const hasImages = images.length > 0
+    const model = hasImages ? 'qwen/qwen3.6-27b' : 'openai/gpt-oss-120b'
     const userContent = input.trim() || 'Take a look at this.'
     let apiContent = userContent
 
     try {
-      if (images.length > 0) {
+      if (hasImages) {
         const base64Images = await Promise.all(images.map(toBase64))
         apiContent = [
           { type: 'text', text: userContent },
@@ -177,15 +179,18 @@ export default function AIAssistant({ session }) {
           Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'qwen/qwen3.6-27b',
+          model,
           messages: apiMessages,
-          max_tokens: 1200,
+          max_tokens: 1000,
           stream: true,
         }),
       })
 
       if (!response.ok) {
         const errBody = await response.text()
+        if (response.status === 429) {
+          throw new Error('Rate limit reached. Wait about 15-20 seconds and try again.')
+        }
         throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
       }
 
@@ -366,4 +371,4 @@ export default function AIAssistant({ session }) {
       )}
     </div>
   )
-            }
+        }

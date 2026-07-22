@@ -142,13 +142,11 @@ export default function AIAssistant({ session }) {
     setLoading(true)
     setError('')
 
-    const hasImages = images.length > 0
-    const model = hasImages ? 'qwen/qwen3.6-27b' : 'openai/gpt-oss-120b'
     const userContent = input.trim() || 'Take a look at this.'
     let apiContent = userContent
 
     try {
-      if (hasImages) {
+      if (images.length > 0) {
         const base64Images = await Promise.all(images.map(toBase64))
         apiContent = [
           { type: 'text', text: userContent },
@@ -172,25 +170,22 @@ export default function AIAssistant({ session }) {
         { role: 'user', content: apiContent },
       ]
 
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
+          Authorization: `Bearer ${import.meta.env.VITE_GEMINI_API_KEY}`,
         },
         body: JSON.stringify({
-          model,
+          model: 'gemini-2.5-flash',
           messages: apiMessages,
-          max_tokens: 1000,
+          max_tokens: 1200,
           stream: true,
         }),
       })
 
       if (!response.ok) {
         const errBody = await response.text()
-        if (response.status === 429) {
-          throw new Error('Rate limit reached. Wait about 15-20 seconds and try again.')
-        }
         throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
       }
 
@@ -371,4 +366,4 @@ export default function AIAssistant({ session }) {
       )}
     </div>
   )
-        }
+    }

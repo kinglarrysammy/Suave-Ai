@@ -51,15 +51,19 @@ export default function ReplyGenerator({ session }) {
       reader.onerror = reject
     })
 
-  const callGroq = async (model, messages, maxTokens = 600) => {
+  const callGemini = async (messages, maxTokens = 700) => {
     const attemptCall = async () => {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
+          Authorization: `Bearer ${import.meta.env.VITE_GEMINI_API_KEY}`,
         },
-        body: JSON.stringify({ model, messages, max_tokens: maxTokens }),
+        body: JSON.stringify({
+          model: 'gemini-2.5-flash',
+          messages,
+          max_tokens: maxTokens,
+        }),
       })
       return response
     }
@@ -67,16 +71,13 @@ export default function ReplyGenerator({ session }) {
     let response = await attemptCall()
 
     if (response.status === 429) {
-      setLoadingStep('Rate limit hit, waiting a moment...')
-      await sleep(12000)
+      setLoadingStep('Briefly rate limited, retrying...')
+      await sleep(5000)
       response = await attemptCall()
     }
 
     if (!response.ok) {
       const errBody = await response.text()
-      if (response.status === 429) {
-        throw new Error('Groq\'s free-tier rate limit was hit. Wait about 15-20 seconds and try again.')
-      }
       throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
     }
 
@@ -90,7 +91,7 @@ export default function ReplyGenerator({ session }) {
       ? ''
       : ' If the screenshot contains forwarded content, status updates, or embedded images, focus only on the actual typed chat messages (text bubbles), and ignore forwarded media previews or status content when identifying LEFT/RIGHT messages.'
 
-    const transcriptRaw = await callGroq('qwen/qwen3.6-27b', [
+    const transcriptRaw = await callGemini([
       {
         role: 'user',
         content: [
@@ -110,7 +111,7 @@ Determine LEFT vs RIGHT purely by which side of the screen the bubble is positio
           },
         ],
       },
-    ], 600)
+    ], 800)
 
     const lines = transcriptRaw
       .split('\n')
@@ -155,7 +156,7 @@ Determine LEFT vs RIGHT purely by which side of the screen the bubble is positio
       }
 
       setLoadingStep('Writing replies...')
-      const replyRaw = await callGroq('openai/gpt-oss-120b', [
+      const replyRaw = await callGemini([
         {
           role: 'user',
           content: `Here is a chat transcript for context:
@@ -167,7 +168,7 @@ Write 3 different reply options, in a ${tone} tone, that directly and naturally 
 
 Intensity level for these replies: ${spiceDescriptor(spice)}.
 
-Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, no thinking, just the array.`,
+Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, just the array.`,
         },
       ], 500)
 
@@ -293,4 +294,4 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, no t
       )}
     </div>
   )
-            }
+        }

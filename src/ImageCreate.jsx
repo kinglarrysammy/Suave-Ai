@@ -53,14 +53,14 @@ export default function ImageCreate({ session }) {
     try {
       setLoadingStep('Crafting your prompt...')
 
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
+          Authorization: `Bearer ${import.meta.env.VITE_GEMINI_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'openai/gpt-oss-120b',
+          model: 'gemini-2.5-flash',
           messages: [
             {
               role: 'user',
@@ -69,7 +69,7 @@ export default function ImageCreate({ session }) {
 Idea: "${idea.trim()}"
 Desired style: ${STYLE_HINTS[style]}
 
-Include specifics on: subject and pose, composition and framing, lighting, color palette, and quality boosters appropriate for the style. Output ONLY the final descriptive prompt text, nothing else — no preamble, no quotes, no explanation, no thinking.`,
+Include specifics on: subject and pose, composition and framing, lighting, color palette, and quality boosters appropriate for the style. Output ONLY the final descriptive prompt text, nothing else — no preamble, no quotes, no explanation.`,
             },
           ],
           max_tokens: 500,
@@ -78,9 +78,6 @@ Include specifics on: subject and pose, composition and framing, lighting, color
 
       if (!response.ok) {
         const errBody = await response.text()
-        if (response.status === 429) {
-          throw new Error('Rate limit reached. Wait about 15-20 seconds and try again.')
-        }
         throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
       }
 

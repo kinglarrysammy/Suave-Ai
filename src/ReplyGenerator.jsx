@@ -51,77 +51,20 @@ export default function ReplyGenerator({ session }) {
       reader.onerror = reject
     })
 
-  const callGemini = async (messages, maxTokens = 700) => {
-    const attemptCall = async () => {
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_GEMINI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'gemini-2.5-flash',
-          messages,
-          max_tokens: maxTokens,
-        }),
-      })
-      return response
-    }
-
-    let response = await attemptCall()
-
-    if (response.status === 429) {
-      setLoadingStep('Briefly rate limited, retrying...')
-      await sleep(5000)
-      response = await attemptCall()
-    }
-
-    if (!response.ok) {
-      const errBody = await response.text()
-      throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
-    }
-
-    const data = await response.json()
-    const raw = data.choices?.[0]?.message?.content || ''
-    return stripThinking(raw)
-  }
-
-  const getTranscript = async (base64Image, attempt) => {
-    const strictness = attempt === 1
-      ? ''
-      : ' If the screenshot contains forwarded content, status updates, or embedded images, focus only on the actual typed chat messages (text bubbles), and ignore forwarded media previews or status content when identifying LEFT/RIGHT messages.'
-
-    const transcriptRaw = await callGemini([
-      {
-        role: 'user',
-        content: [
-          {
-            type: 'text',
-            text: `Transcribe this chat screenshot. This could be from any messaging app (WhatsApp, iMessage, Instagram DM, Messenger, Telegram, Snapchat, Tinder, SMS, or any other). List every real chat message bubble you can see, in top-to-bottom order.
-For each one, output a line in this exact format:
-LEFT: <message text>
-or
-RIGHT: <message text>
-
-Determine LEFT vs RIGHT purely by which side of the screen the bubble is positioned on — ignore bubble color, since different apps use different color schemes.${strictness} Do not add commentary, do not summarize. Just the labeled list.`,
-          },
-          {
-            type: 'image_url',
-            image_url: { url: `data:image/jpeg;base64,${base64Image}` },
-          },
-        ],
+  const callGeminiOnce = async (messages, maxTokens) => {
+    const response = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${import.meta.env.VITE_GEMINI_API_KEY}`,
       },
-    ], 800)
-
-    const lines = transcriptRaw
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.startsWith('LEFT:') || l.startsWith('RIGHT:'))
-
-    const lastLeftLine = [...lines].reverse().find((l) => l.startsWith('LEFT:'))
-    const herLastMessage = lastLeftLine ? lastLeftLine.replace('LEFT:', '').trim() : null
-
-    return { lines, herLastMessage }
+      body: JSON.stringify({
+        model: 'gemini-2.5-flash',
+        messages,
+        max_tokens: maxTokens,
+      }),
+    })
+    return response
   }
 
   const generateReplies = async () => {
@@ -139,41 +82,62 @@ Determine LEFT vs RIGHT purely by which side of the screen the bubble is positio
     setCopiedIndices([])
 
     try {
+      setLoadingStep('Reading and writing replies...')
       const base64Image = await toBase64(image)
 
-      setLoadingStep('Reading the conversation...')
-      let { lines, herLastMessage } = await getTranscript(base64Image, 1)
+      const prompt = `This is a chat screenshot (WhatsApp, iMessage, Instagram DM, or similar). Look at the conversation and find the most recent message from the OTHER person (not the app user's own messages — their own messages are on the RIGHT/green/blue side, the other person's are on the LEFT side).
 
-      if (!herLastMessage) {
-        setLoadingStep('Having another look...')
-        const retry = await getTranscript(base64Image, 2)
-        lines = retry.lines
-        herLastMessage = retry.herLastMessage
-      }
+Write 3 different reply options the app user could send back to that person's most recent message, in a ${tone} tone, fitting the flow of the conversation.
 
-      if (!herLastMessage) {
-        throw new Error('Could not read this conversation clearly. Works best with a normal back-and-forth chat screenshot — try cropping out forwarded status updates or media previews.')
-      }
+Intensity level for these replies: ${spiceDescriptor(spice)}. Keep it tasteful and appropriate — playful and confident, never explicit or crude.
 
-      setLoadingStep('Writing replies...')
-      const replyRaw = await callGemini([
+Return ONLY a JSON array of exactly 3 strings, nothing else. No markdown, no explanation, no preamble — just the array, like ["reply one", "reply two", "reply three"]`
+
+      let response = await callGeminiOnce([
         {
           role: 'user',
-          content: `Here is a chat transcript for context:
-${lines.join('\n')}
-
-The other person's most recent message is: "${herLastMessage}"
-
-Write 3 different reply options, in a ${tone} tone, that directly and naturally respond to that message, fitting the flow of the conversation.
-
-Intensity level for these replies: ${spiceDescriptor(spice)}.
-
-Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, just the array.`,
+          content: [
+            { type: 'text', text: prompt },
+            { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+          ],
         },
-      ], 500)
+      ], 600)
 
-      const clean = replyRaw.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(clean)
+      if (response.status === 429) {
+        setLoadingStep('Rate limited, retrying...')
+        await sleep(6000)
+        response = await callGeminiOnce([
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64Image}` } },
+            ],
+          },
+        ], 600)
+      }
+
+      if (!response.ok) {
+        const errBody = await response.text()
+        throw new Error(`API error (${response.status}): ${errBody.slice(0, 200)}`)
+      }
+
+      const data = await response.json()
+      const rawContent = data.choices?.[0]?.message?.content || ''
+      const finishReason = data.choices?.[0]?.finish_reason
+
+      if (!rawContent.trim()) {
+        if (finishReason === 'content_filter' || finishReason === 'safety') {
+          throw new Error('The response was filtered. Try lowering the spice level or picking a different tone.')
+        }
+        throw new Error('No response received. Try again, or try a lower spice level.')
+      }
+
+      const cleaned = stripThinking(rawContent)
+      const jsonMatch = cleaned.match(/\[[\s\S]*\]/)
+      const jsonText = jsonMatch ? jsonMatch[0] : cleaned.replace(/```json|```/g, '').trim()
+
+      const parsed = JSON.parse(jsonText)
       setReplies(parsed)
     } catch (err) {
       setError(err.message || 'Failed to generate replies. Try again.')
@@ -221,7 +185,7 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, just
           <>
             <div className="upload-icon">⬆️</div>
             <div className="upload-title">Click to upload or drag and drop</div>
-            <div className="upload-hint">Works best with a normal back-and-forth chat — not status updates or forwards</div>
+            <div className="upload-hint">Works best with a normal back-and-forth chat</div>
           </>
         )}
         <label className="upload-label">
@@ -294,4 +258,4 @@ Return ONLY a JSON array of exactly 3 strings. No markdown, no explanation, just
       )}
     </div>
   )
-        }
+      }
